@@ -63,9 +63,9 @@ const Layout = (() => {
       <div class="app-shell">
         <aside class="sidebar">
           <div class="brand">
-            <div class="brand-mark">B</div>
-            <div class="brand-word">Belhandar<small>Partner Sistemi</small></div>
+            <img class="brand-logo" src="./assets/branding/belhandar-wordmark-gold.png" alt="Belhandar Parfümleri" />
           </div>
+          <div class="sidebar-subtitle">Paydaş / Bayi Sistemi</div>
           <nav class="sidebar-nav" data-nav-root>
             ${nav.map((n) => `
               <a class="nav-item" data-path="${n.path}" href="#${n.path}">
@@ -88,6 +88,7 @@ const Layout = (() => {
             <div class="topbar-actions">
               <span class="text-muted" style="font-size:13px">${user.firstName} ${user.lastName}</span>
               <div class="avatar" style="width:30px;height:30px;font-size:11px">${initials(user)}</div>
+              <button class="logout-btn" data-action="logout-top" title="Cikis yap" style="color:var(--text-muted)">${ICONS.logout}</button>
             </div>
           </header>
           <div class="page" data-page-slot></div>
@@ -103,6 +104,10 @@ const Layout = (() => {
     `;
 
     container.querySelector('[data-action="logout"]').addEventListener('click', async () => {
+      await Auth.logout();
+      Router.navigate('/login');
+    });
+    container.querySelector('[data-action="logout-top"]').addEventListener('click', async () => {
       await Auth.logout();
       Router.navigate('/login');
     });
