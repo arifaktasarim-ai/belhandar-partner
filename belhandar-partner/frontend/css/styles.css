@@ -116,6 +116,7 @@ button { font-family: inherit; }
   padding: 22px 16px;
   display: flex; flex-direction: column; gap: 22px;
   z-index: 40;
+  overflow-y: auto;
 }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .nav-item {
