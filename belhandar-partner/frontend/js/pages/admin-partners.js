@@ -1,5 +1,6 @@
 const AdminPartnersPage = {
   state: { status: '', search: '' },
+  plans: [],
 
   async render(container) {
     const slot = Layout.renderShell(container, { title: 'Paydaslar' });
@@ -41,7 +42,17 @@ const AdminPartnersPage = {
       reload();
     });
 
+    await this.fetchPlans();
     await reload();
+  },
+
+  async fetchPlans() {
+    try {
+      const { data } = await Api.get('/admin/commission-plans');
+      this.plans = data.filter((p) => p.isActive);
+    } catch (_e) {
+      this.plans = [];
+    }
   },
 
   async load(listWrap) {
@@ -99,6 +110,17 @@ const AdminPartnersPage = {
     return `<div style="display:flex; gap:6px; flex-wrap:wrap;">${btns.join('')}</div>`;
   },
 
+  commissionSelectHtml(p) {
+    if (!this.plans.length) return p.partnerProfile?.commissionPlan?.name || '—';
+    const currentId = p.partnerProfile?.commissionPlan?.id || '';
+    return `
+      <select data-commission-select data-id="${p.id}" style="padding:5px 8px; border:1px solid var(--border-strong); border-radius:6px; font-size:12.5px;">
+        <option value="">Plan seçilmedi</option>
+        ${this.plans.map((plan) => `<option value="${plan.id}" ${plan.id === currentId ? 'selected' : ''}>${plan.name}</option>`).join('')}
+      </select>
+    `;
+  },
+
   rowHtml(p) {
     return `
       <tr>
@@ -108,7 +130,7 @@ const AdminPartnersPage = {
         </td>
         <td>${p.partnerProfile ? `${p.partnerProfile.city} / ${p.partnerProfile.district}` : '—'}</td>
         <td class="mono">${new Date(p.createdAt).toLocaleDateString('tr-TR')}</td>
-        <td>${p.partnerProfile?.commissionPlan?.name || '—'}</td>
+        <td>${this.commissionSelectHtml(p)}</td>
         <td>${this.statusBadge(p.status)}</td>
         <td>${this.actionsHtml(p)}</td>
       </tr>
@@ -127,13 +149,30 @@ const AdminPartnersPage = {
         </div>
         <div class="record-card-row"><span class="label">Sehir</span><span>${p.partnerProfile ? `${p.partnerProfile.city} / ${p.partnerProfile.district}` : '—'}</span></div>
         <div class="record-card-row"><span class="label">Kayit</span><span>${new Date(p.createdAt).toLocaleDateString('tr-TR')}</span></div>
-        <div class="record-card-row"><span class="label">Komisyon</span><span>${p.partnerProfile?.commissionPlan?.name || '—'}</span></div>
+        <div class="record-card-row"><span class="label">Komisyon</span><span>${this.commissionSelectHtml(p)}</span></div>
         <div style="margin-top:10px">${this.actionsHtml(p)}</div>
       </div>
     `;
   },
 
   bindActions(listWrap) {
+    listWrap.querySelectorAll('[data-commission-select]').forEach((sel) => {
+      sel.addEventListener('change', async () => {
+        const id = sel.dataset.id;
+        const commissionPlanId = sel.value;
+        if (!commissionPlanId) return;
+        sel.disabled = true;
+        try {
+          await Api.patch(`/admin/partners/${id}/commission-plan`, { commissionPlanId });
+          Toast.success('Komisyon planı güncellendi.');
+        } catch (err) {
+          Toast.error(err.message);
+        } finally {
+          sel.disabled = false;
+        }
+      });
+    });
+
     listWrap.querySelectorAll('[data-act]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const action = btn.dataset.act;

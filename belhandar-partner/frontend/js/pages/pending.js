@@ -25,8 +25,7 @@ const PendingPage = {
       <div class="auth-shell">
         <div class="auth-visual">
           <div class="brand">
-            <div class="brand-mark">B</div>
-            <div class="brand-word">Belhandar<small>Partner Sistemi</small></div>
+            <img class="brand-logo" src="./assets/branding/belhandar-wordmark-gold.png" alt="Belhandar Parfümleri" />
           </div>
         </div>
         <div class="auth-form-side">
