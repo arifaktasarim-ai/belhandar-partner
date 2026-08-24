@@ -49,7 +49,7 @@
   });
   Router.register('/admin/products', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
-    render: ComingSoonPage.render('Urunler', 'Urun ve komisyon yonetimi Asama 4te eklenecek.'),
+    render: (c) => AdminProductsPage.render(c),
   });
   Router.register('/admin/orders', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
