@@ -75,6 +75,22 @@ button { font-family: inherit; }
   align-items: center;
   gap: 10px;
 }
+.sidebar-subtitle {
+  margin-top: -14px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-on-ink-muted);
+}
+
+.brand-logo {
+  display: block;
+  height: auto;
+}
+.sidebar .brand-logo { width: 172px; }
+.auth-visual .brand-logo { width: 240px; }
+
 .brand-mark {
   width: 34px; height: 34px;
   border-radius: 50%;
