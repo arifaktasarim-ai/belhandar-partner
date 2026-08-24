@@ -10,6 +10,8 @@ import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 
 import authRoutes from './modules/auth/auth.routes';
 import adminPartnersRoutes from './modules/admin-partners/admin-partners.routes';
+import productsRoutes from './modules/products/products.routes';
+import commissionPlansRoutes from './modules/commission-plans/commission-plans.routes';
 
 const app = express();
 
@@ -47,6 +49,8 @@ app.get('/health', (_req, res) => {
 // --- Route'lar ---
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/partners', adminPartnersRoutes);
+app.use('/api/products', productsRoutes);
+app.use('/api/admin/commission-plans', commissionPlansRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);
