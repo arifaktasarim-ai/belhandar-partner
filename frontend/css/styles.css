@@ -171,6 +171,7 @@ button { font-family: inherit; }
   margin-left: auto; background: none; border: none; color: var(--text-on-ink-muted);
   cursor: pointer; padding: 6px; border-radius: var(--radius-sm);
 }
+.logout-btn svg { width: 17px; height: 17px; display: block; }
 .logout-btn:hover { color: var(--wine); background: rgba(255,255,255,0.06); }
 
 .main {

@@ -12,6 +12,8 @@ import authRoutes from './modules/auth/auth.routes';
 import adminPartnersRoutes from './modules/admin-partners/admin-partners.routes';
 import productsRoutes from './modules/products/products.routes';
 import commissionPlansRoutes from './modules/commission-plans/commission-plans.routes';
+import stocksRoutes from './modules/stocks/stocks.routes';
+import ordersRoutes from './modules/orders/orders.routes';
 
 const app = express();
 
@@ -51,6 +53,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin/partners', adminPartnersRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/admin/commission-plans', commissionPlansRoutes);
+app.use('/api/stocks', stocksRoutes);
+app.use('/api/orders', ordersRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);

@@ -88,7 +88,10 @@ const Layout = (() => {
             <div class="topbar-actions">
               <span class="text-muted" style="font-size:13px">${user.firstName} ${user.lastName}</span>
               <div class="avatar" style="width:30px;height:30px;font-size:11px">${initials(user)}</div>
-              <button class="logout-btn" data-action="logout-top" title="Cikis yap" style="color:var(--text-muted)">${ICONS.logout}</button>
+              <button class="btn btn-outline" data-action="logout-top" title="Cikis yap" style="padding:7px 12px; min-height:auto; gap:6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+                <span>Çıkış</span>
+              </button>
             </div>
           </header>
           <div class="page" data-page-slot></div>

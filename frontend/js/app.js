@@ -27,11 +27,11 @@
   });
   Router.register('/partner/stocks', {
     requiresAuth: true, roles: ['PARTNER'],
-    render: ComingSoonPage.render('Stok', 'Paydas stok ekrani Asama 4te eklenecek.'),
+    render: (c) => PartnerStocksPage.render(c),
   });
   Router.register('/partner/orders', {
     requiresAuth: true, roles: ['PARTNER'],
-    render: ComingSoonPage.render('Siparis', 'Siparis olusturma/takip ekrani Asama 6da eklenecek.'),
+    render: (c) => PartnerOrdersPage.render(c),
   });
   Router.register('/partner/profile', {
     requiresAuth: true, roles: ['PARTNER'],
@@ -53,7 +53,7 @@
   });
   Router.register('/admin/orders', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
-    render: ComingSoonPage.render('Siparisler', 'Siparis onay/red ekrani Asama 6da eklenecek.'),
+    render: (c) => AdminOrdersPage.render(c),
   });
   Router.register('/admin/production', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
