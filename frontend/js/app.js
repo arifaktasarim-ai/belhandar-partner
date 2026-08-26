@@ -23,7 +23,7 @@
   });
   Router.register('/partner/sales', {
     requiresAuth: true, roles: ['PARTNER'],
-    render: ComingSoonPage.render('Satis', 'Satis kaydi ekrani Asama 5te eklenecek.'),
+    render: (c) => PartnerSalesPage.render(c),
   });
   Router.register('/partner/stocks', {
     requiresAuth: true, roles: ['PARTNER'],
