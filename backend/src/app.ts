@@ -14,12 +14,8 @@ import productsRoutes from './modules/products/products.routes';
 import commissionPlansRoutes from './modules/commission-plans/commission-plans.routes';
 import stocksRoutes from './modules/stocks/stocks.routes';
 import ordersRoutes from './modules/orders/orders.routes';
-import salesRoutes from './modules/sales/sales.routes';
-import earningsRoutes from './modules/earnings/earnings.routes';
-import dashboardRoutes from './modules/dashboard/dashboard.routes';
 
 const app = express();
-app.set('trust proxy', 1);
 
 // --- Guvenlik & temel middleware'ler ---
 app.use(helmet());
@@ -59,9 +55,6 @@ app.use('/api/products', productsRoutes);
 app.use('/api/admin/commission-plans', commissionPlansRoutes);
 app.use('/api/stocks', stocksRoutes);
 app.use('/api/orders', ordersRoutes);
-app.use('/api/sales', salesRoutes);
-app.use('/api/earnings', earningsRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);
