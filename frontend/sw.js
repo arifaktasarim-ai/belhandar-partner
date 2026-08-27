@@ -1,16 +1,11 @@
-// Belhandar Partner - Basit service worker (Asama 10'da genisletilecek)
-const CACHE_NAME = 'belhandar-partner-v1';
+// Belhandar Partner - Basit service worker
+// NOT: CACHE_NAME her onemli guncellemede degistirilmelidir; boylece eski
+// cache otomatik temizlenir ve kullanicilar guncel dosyalari gorur.
+const CACHE_NAME = 'belhandar-partner-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
   './css/styles.css',
-  './js/config.js',
-  './js/api.js',
-  './js/auth.js',
-  './js/toast.js',
-  './js/layout.js',
-  './js/router.js',
-  './js/app.js',
 ];
 
 self.addEventListener('install', (event) => {
@@ -29,14 +24,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Sadece GET + ayni origin isteklerini cache'ler; API cagrilari (farkli origin/backend)
-// her zaman network'ten gider, boylece veriler asla eskimis gosterilmez.
+// NETWORK-FIRST: once internetten guncel dosyayi almayi dener; sadece offline
+// durumda (network hatasi) cache'e duser. Boylece yeni deploy edilen JS/CSS
+// dosyalari her zaman gorulur, kullanicilar eski surumde takili kalmaz.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request)),
+    fetch(event.request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => {});
+        return response;
+      })
+      .catch(() => caches.match(event.request)),
   );
 });
