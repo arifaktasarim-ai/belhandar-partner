@@ -19,7 +19,6 @@ import earningsRoutes from './modules/earnings/earnings.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 
 const app = express();
-app.set('trust proxy', 1);
 
 // --- Guvenlik & temel middleware'ler ---
 app.use(helmet());

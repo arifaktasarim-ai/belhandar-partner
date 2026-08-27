@@ -61,7 +61,7 @@
   });
   Router.register('/admin/stocks', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
-    render: ComingSoonPage.render('Stok', 'Merkezi stok ekrani Asama 4te eklenecek.'),
+    render: (c) => AdminStocksPage.render(c),
   });
   Router.register('/admin/payments', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
