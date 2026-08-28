@@ -58,6 +58,40 @@ const PartnerDashboardPage = {
           Bekleyen: <strong style="color:var(--amber);">${this.fmtTl(earnings.pendingCents)}</strong>
         </p>
       </div>
+
+      <div class="section-title" style="margin-top:24px;">Ödeme Geçmişi</div>
+      <div id="payment-history"></div>
     `;
+
+    this.loadPaymentHistory(slot.querySelector('#payment-history'));
+  },
+
+  async loadPaymentHistory(wrap) {
+    wrap.innerHTML = `<div class="card card-pad" style="text-align:center; padding:20px;"><div class="spinner" style="margin:0 auto"></div></div>`;
+    try {
+      const { data: payments } = await Api.get('/payments/me');
+      if (!payments.length) {
+        wrap.innerHTML = `<div class="card card-pad text-muted">Henüz ödeme yapılmadı.</div>`;
+        return;
+      }
+      wrap.innerHTML = `
+        <div class="card table-wrap">
+          <table>
+            <thead><tr><th>Tarih</th><th>Tutar</th><th>Açıklama</th></tr></thead>
+            <tbody>
+              ${payments.map((p) => `
+                <tr>
+                  <td class="mono">${new Date(p.paidAt).toLocaleDateString('tr-TR')}</td>
+                  <td>${this.fmtTl(p.amountCents)}</td>
+                  <td class="text-muted">${p.description || '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      wrap.innerHTML = `<div class="card card-pad"><p class="field-error">${err.message}</p></div>`;
+    }
   },
 };

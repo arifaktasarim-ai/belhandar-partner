@@ -65,11 +65,11 @@
   });
   Router.register('/admin/payments', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
-    render: ComingSoonPage.render('Odemeler', 'Odeme/kazanc takip ekrani Asama 8de eklenecek.'),
+    render: (c) => AdminPaymentsPage.render(c),
   });
   Router.register('/admin/reports', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
-    render: ComingSoonPage.render('Raporlar', 'Raporlama ekrani Asama 9da eklenecek.'),
+    render: (c) => AdminReportsPage.render(c),
   });
   Router.register('/admin/settings', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],

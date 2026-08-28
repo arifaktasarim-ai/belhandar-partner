@@ -17,6 +17,8 @@ import ordersRoutes from './modules/orders/orders.routes';
 import salesRoutes from './modules/sales/sales.routes';
 import earningsRoutes from './modules/earnings/earnings.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import paymentsRoutes from './modules/payments/payments.routes';
+import reportsRoutes from './modules/reports/reports.routes';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -62,6 +64,8 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/earnings', earningsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);
