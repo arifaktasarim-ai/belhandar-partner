@@ -249,6 +249,9 @@ const AdminProductsPage = {
 
     const fd = new FormData(form);
     const payload = Object.fromEntries(fd.entries());
+	if (!payload.imageUrl) {
+  delete payload.imageUrl;
+}
     payload.isDefault = form.querySelector('#plan-default').checked;
 
     const submitBtn = form.querySelector('button[type="submit"]');

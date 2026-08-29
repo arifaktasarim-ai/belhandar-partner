@@ -6,7 +6,10 @@ export const createProductSchema = z.object({
   productCode: z.string().min(2, 'Urun kodu zorunludur'),
   perfumeType: z.string().optional(),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.union([
+  z.string().url(),
+  z.literal(''),
+]).optional(),
 
   // Ilk varyant bilgileri (urun olustururken en az 1 varyant zorunlu)
   volumeMl: z.coerce.number().int().positive('Hacim (ml) pozitif olmalidir'),
@@ -25,7 +28,10 @@ export const updateProductSchema = z.object({
   name: z.string().min(2).optional(),
   perfumeType: z.string().optional(),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.union([
+  z.string().url(),
+  z.literal(''),
+]).optional(),
   isActive: z.boolean().optional(),
 });
 
