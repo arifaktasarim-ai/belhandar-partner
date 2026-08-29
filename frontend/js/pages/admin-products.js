@@ -199,6 +199,14 @@ const AdminProductsPage = {
     const fd = new FormData(form);
     const payload = Object.fromEntries(fd.entries());
 
+if (!payload.imageUrl) {
+  delete payload.imageUrl;
+}
+
+if (!payload.barcode) {
+  delete payload.barcode;
+}
+
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     try {
@@ -247,11 +255,10 @@ const AdminProductsPage = {
     const errorBox = slot.querySelector('#plan-form-error');
     errorBox.style.display = 'none';
 
-    const fd = new FormData(form);
-    const payload = Object.fromEntries(fd.entries());
-	if (!payload.imageUrl) {
-  delete payload.imageUrl;
-}
+    const fd = new FormData(form); 
+	const payload = Object.fromEntries(fd.entries()); 
+	if (!payload.imageUrl) { delete payload.imageUrl; } 
+	if (!payload.barcode) { delete payload.barcode; }
     payload.isDefault = form.querySelector('#plan-default').checked;
 
     const submitBtn = form.querySelector('button[type="submit"]');
