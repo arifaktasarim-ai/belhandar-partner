@@ -21,6 +21,69 @@ router.get(
   }),
 );
 
+router.get(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    const partner = await service.getPartnerDetail(req.params.id);
+    res.json({ success: true, data: partner });
+  }),
+);
+
+const createPartnerSchema = z.object({
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  username: z.string().min(3).regex(/^[a-zA-Z0-9_.]+$/),
+  email: z.string().email(),
+  phone: z.string().min(10),
+  password: z.string().min(8),
+  city: z.string().min(2),
+  district: z.string().min(2),
+  address: z.string().min(5),
+  iban: z.string().min(10),
+  taxId: z.string().optional(),
+  taxOffice: z.string().optional(),
+  status: z.enum(['ACTIVE', 'PENDING_APPROVAL']).optional(),
+});
+
+router.post(
+  '/',
+  validateBody(createPartnerSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const partner = await service.createPartner(req.body, req.user!.sub);
+    res.status(201).json({ success: true, data: partner });
+  }),
+);
+
+const updatePartnerSchema = z.object({
+  firstName: z.string().min(2).optional(),
+  lastName: z.string().min(2).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().min(10).optional(),
+  city: z.string().min(2).optional(),
+  district: z.string().min(2).optional(),
+  address: z.string().min(5).optional(),
+  iban: z.string().min(10).optional(),
+  taxId: z.string().optional(),
+  taxOffice: z.string().optional(),
+});
+
+router.put(
+  '/:id',
+  validateBody(updatePartnerSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const partner = await service.updatePartner(req.params.id, req.body, req.user!.sub);
+    res.json({ success: true, data: partner });
+  }),
+);
+
+router.delete(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    await service.deletePartner(req.params.id, req.user!.sub);
+    res.json({ success: true, message: 'Paydas silindi.' });
+  }),
+);
+
 const statusChangeSchema = z.object({
   action: z.enum(['approve', 'reject', 'suspend', 'activate']),
   reason: z.string().optional(),

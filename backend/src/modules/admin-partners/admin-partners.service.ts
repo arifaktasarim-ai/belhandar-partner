@@ -1,6 +1,172 @@
 import { Role, UserStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../utils/apiError';
+import { hashPassword } from '../../utils/password';
+
+export async function getPartnerDetail(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      partnerProfile: {
+        include: {
+          commissionPlan: true,
+          _count: { select: { sales: true, orders: true, payments: true } },
+        },
+      },
+      approvedBy: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!user || user.role !== Role.PARTNER) throw ApiError.notFound('Paydas bulunamadi.');
+  const { passwordHash: _omit, ...safe } = user;
+  return safe;
+}
+
+export async function createPartner(input: {
+  firstName: string; lastName: string; username: string; email: string; phone: string;
+  password: string; city: string; district: string; address: string; iban: string;
+  taxId?: string; taxOffice?: string; status?: 'ACTIVE' | 'PENDING_APPROVAL';
+}, actorUserId: string) {
+  const existing = await prisma.user.findFirst({ where: { OR: [{ username: input.username }, { email: input.email }] } });
+  if (existing) throw ApiError.conflict('Bu kullanici adi veya e-posta zaten kullaniliyor.');
+
+  const passwordHash = await hashPassword(input.password);
+  const status = input.status || 'ACTIVE';
+
+  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const user = await tx.user.create({
+      data: {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        username: input.username,
+        email: input.email,
+        phone: input.phone,
+        passwordHash,
+        role: Role.PARTNER,
+        status,
+        kvkkAcceptedAt: new Date(),
+        approvedById: status === 'ACTIVE' ? actorUserId : null,
+        approvedAt: status === 'ACTIVE' ? new Date() : null,
+        partnerProfile: {
+          create: {
+            city: input.city,
+            district: input.district,
+            address: input.address,
+            iban: input.iban.toUpperCase().replace(/\s/g, ''),
+            taxId: input.taxId,
+            taxOffice: input.taxOffice,
+          },
+        },
+      },
+      include: { partnerProfile: true },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'PARTNER_CREATED_BY_ADMIN',
+        entityType: 'User',
+        entityId: user.id,
+        afterData: { username: user.username },
+      },
+    });
+
+    return user;
+  });
+
+  const { passwordHash: _omit, ...safe } = created;
+  return safe;
+}
+
+export async function updatePartner(userId: string, input: {
+  firstName?: string; lastName?: string; email?: string; phone?: string;
+  city?: string; district?: string; address?: string; iban?: string; taxId?: string; taxOffice?: string;
+}, actorUserId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { partnerProfile: true } });
+  if (!user || user.role !== Role.PARTNER || !user.partnerProfile) throw ApiError.notFound('Paydas bulunamadi.');
+
+  if (input.email && input.email !== user.email) {
+    const emailTaken = await prisma.user.findUnique({ where: { email: input.email } });
+    if (emailTaken) throw ApiError.conflict('Bu e-posta zaten kullaniliyor.');
+  }
+
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await tx.user.update({
+      where: { id: userId },
+      data: {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        phone: input.phone,
+        partnerProfile: {
+          update: {
+            city: input.city,
+            district: input.district,
+            address: input.address,
+            iban: input.iban ? input.iban.toUpperCase().replace(/\s/g, '') : undefined,
+            taxId: input.taxId,
+            taxOffice: input.taxOffice,
+          },
+        },
+      },
+      include: { partnerProfile: true },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'PARTNER_UPDATED_BY_ADMIN',
+        entityType: 'User',
+        entityId: userId,
+        beforeData: { email: user.email, phone: user.phone },
+        afterData: { email: result.email, phone: result.phone },
+      },
+    });
+
+    return result;
+  });
+
+  const { passwordHash: _omit, ...safe } = updated;
+  return safe;
+}
+
+export async function deletePartner(userId: string, actorUserId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { partnerProfile: true } });
+  if (!user || user.role !== Role.PARTNER) throw ApiError.notFound('Paydas bulunamadi.');
+  if (!user.partnerProfile) throw ApiError.notFound('Paydas profili bulunamadi.');
+
+  const [saleCount, orderCount, paymentCount, earningCount] = await Promise.all([
+    prisma.sale.count({ where: { partnerProfileId: user.partnerProfile.id } }),
+    prisma.order.count({ where: { partnerProfileId: user.partnerProfile.id } }),
+    prisma.payment.count({ where: { partnerProfileId: user.partnerProfile.id } }),
+    prisma.earning.count({ where: { partnerProfileId: user.partnerProfile.id } }),
+  ]);
+
+  if (saleCount > 0 || orderCount > 0 || paymentCount > 0 || earningCount > 0) {
+    throw ApiError.conflict(
+      'Bu paydasin satis, siparis, odeme veya kazanc kaydi oldugu icin silinemez. ' +
+      'Veri butunlugunu korumak amaciyla, kalici silme yerine "Askiya Al" secenegini kullanmanizi oneririz.',
+    );
+  }
+
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Bu kullaniciya ait, silmeyi engelleyecek referanslari (kendi kaydi gibi) temizle
+    await tx.auditLog.updateMany({ where: { actorUserId: userId }, data: { actorUserId: null } });
+    await tx.notification.deleteMany({ where: { userId } });
+    await tx.refreshToken.deleteMany({ where: { userId } });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'PARTNER_DELETED',
+        entityType: 'User',
+        entityId: userId,
+        beforeData: { username: user.username, email: user.email },
+      },
+    });
+
+    await tx.user.delete({ where: { id: userId } }); // partnerProfile onDelete:Cascade ile birlikte silinir
+  });
+}
 
 export async function assignCommissionPlan(targetUserId: string, commissionPlanId: string, actorUserId: string) {
   const target = await prisma.user.findUnique({ where: { id: targetUserId }, include: { partnerProfile: true } });
