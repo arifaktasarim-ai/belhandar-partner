@@ -19,9 +19,12 @@ import earningsRoutes from './modules/earnings/earnings.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import paymentsRoutes from './modules/payments/payments.routes';
 import reportsRoutes from './modules/reports/reports.routes';
+import notificationsRoutes from './modules/notifications/notifications.routes';
+import settingsRoutes from './modules/settings/settings.routes';
+import auditLogsRoutes from './modules/audit-logs/audit-logs.routes';
+import usersRoutes from './modules/users/users.routes';
 
 const app = express();
-app.set('trust proxy', 1);
 
 // --- Guvenlik & temel middleware'ler ---
 app.use(helmet());
@@ -66,6 +69,10 @@ app.use('/api/earnings', earningsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/admin/audit-logs', auditLogsRoutes);
+app.use('/api/users', usersRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);

@@ -86,6 +86,13 @@ const Layout = (() => {
           <header class="topbar">
             <div class="topbar-title">${title}</div>
             <div class="topbar-actions">
+              <div style="position:relative;">
+                <button class="btn btn-ghost" data-action="toggle-notifications" style="padding:8px; min-height:auto;" title="Bildirimler">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:19px;height:19px;"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <span id="notif-badge" style="display:none; position:absolute; top:2px; right:2px; background:var(--wine); color:white; font-size:10px; font-weight:700; border-radius:100px; padding:1px 5px; line-height:1.3;"></span>
+                </button>
+                <div id="notif-dropdown" style="display:none; position:absolute; right:0; top:calc(100% + 8px); width:320px; max-height:400px; overflow-y:auto; background:var(--paper); border:1px solid var(--border); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); z-index:60;"></div>
+              </div>
               <span class="text-muted" style="font-size:13px">${user.firstName} ${user.lastName}</span>
               <div class="avatar" style="width:30px;height:30px;font-size:11px">${initials(user)}</div>
               <button class="btn btn-outline" data-action="logout-top" title="Cikis yap" style="padding:7px 12px; min-height:auto; gap:6px;">
@@ -115,7 +122,80 @@ const Layout = (() => {
       Router.navigate('/login');
     });
 
+    initNotifications(container);
+
     return container.querySelector('[data-page-slot]');
+  }
+
+  function timeAgo(dateStr) {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'az önce';
+    if (mins < 60) return `${mins} dk önce`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} sa önce`;
+    return `${Math.floor(hours / 24)} gün önce`;
+  }
+
+  async function initNotifications(container) {
+    const badge = container.querySelector('#notif-badge');
+    const dropdown = container.querySelector('#notif-dropdown');
+    const toggleBtn = container.querySelector('[data-action="toggle-notifications"]');
+
+    async function refreshBadge() {
+      try {
+        const { data } = await Api.get('/notifications/me/unread-count');
+        if (data.count > 0) {
+          badge.textContent = data.count > 9 ? '9+' : data.count;
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (_e) { /* sessiz gec */ }
+    }
+
+    async function loadList() {
+      dropdown.innerHTML = `<div style="padding:20px; text-align:center;"><div class="spinner" style="margin:0 auto"></div></div>`;
+      try {
+        const { data: notifications } = await Api.get('/notifications/me');
+        if (!notifications.length) {
+          dropdown.innerHTML = `<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Bildirim yok.</div>`;
+          return;
+        }
+        dropdown.innerHTML = `
+          <div style="padding:10px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:13px;">Bildirimler</strong>
+            <button data-mark-all style="background:none; border:none; color:var(--gold-dim); font-size:12px; cursor:pointer;">Tümünü okundu yap</button>
+          </div>
+          ${notifications.map((n) => `
+            <div style="padding:12px 14px; border-bottom:1px solid var(--border); ${n.isRead ? '' : 'background:rgba(176,141,63,0.06);'}">
+              <div style="font-weight:600; font-size:13px;">${n.title}</div>
+              <div class="text-muted" style="font-size:12px; margin:3px 0;">${n.message}</div>
+              <div class="text-muted" style="font-size:10.5px;">${timeAgo(n.createdAt)}</div>
+            </div>
+          `).join('')}
+        `;
+        dropdown.querySelector('[data-mark-all]')?.addEventListener('click', async () => {
+          await Api.patch('/notifications/read-all');
+          await refreshBadge();
+          await loadList();
+        });
+      } catch (_e) {
+        dropdown.innerHTML = `<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Yüklenemedi.</div>`;
+      }
+    }
+
+    toggleBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const willShow = dropdown.style.display === 'none';
+      dropdown.style.display = willShow ? 'block' : 'none';
+      if (willShow) await loadList();
+    });
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && e.target !== toggleBtn) dropdown.style.display = 'none';
+    });
+
+    await refreshBadge();
   }
 
   function highlightActiveNav(path) {

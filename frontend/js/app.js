@@ -35,7 +35,7 @@
   });
   Router.register('/partner/profile', {
     requiresAuth: true, roles: ['PARTNER'],
-    render: ComingSoonPage.render('Profil', 'Profil duzenleme ekrani yakinda eklenecek.'),
+    render: (c) => PartnerProfilePage.render(c),
   });
 
   // --- Admin rotalari ---
@@ -57,7 +57,7 @@
   });
   Router.register('/admin/production', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
-    render: ComingSoonPage.render('Uretim', 'Uretim durumu takip ekrani Asama 7de eklenecek.'),
+    render: (c) => AdminProductionPage.render(c),
   });
   Router.register('/admin/stocks', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
@@ -73,7 +73,7 @@
   });
   Router.register('/admin/settings', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
-    render: ComingSoonPage.render('Ayarlar', 'Sistem ayarlari ekrani yakinda eklenecek.'),
+    render: (c) => AdminSettingsPage.render(c),
   });
 
   Router.init(document.getElementById('app'));
