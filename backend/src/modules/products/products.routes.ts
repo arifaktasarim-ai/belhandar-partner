@@ -79,4 +79,24 @@ router.put(
   }),
 );
 
+router.delete(
+  '/variants/:variantId',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req: Request, res: Response) => {
+    await service.deleteVariant(req.params.variantId, req.user!.sub);
+    res.json({ success: true, message: 'Varyant silindi.' });
+  }),
+);
+
+router.delete(
+  '/:id',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req: Request, res: Response) => {
+    await service.deleteProduct(req.params.id, req.user!.sub);
+    res.json({ success: true, message: 'Urun silindi.' });
+  }),
+);
+
 export default router;

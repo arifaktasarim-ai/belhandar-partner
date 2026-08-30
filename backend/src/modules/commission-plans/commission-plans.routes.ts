@@ -36,4 +36,12 @@ router.put(
   }),
 );
 
+router.delete(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    await service.deletePlan(req.params.id, req.user!.sub);
+    res.json({ success: true, message: 'Plan silindi.' });
+  }),
+);
+
 export default router;

@@ -56,6 +56,33 @@ export async function createPlan(input: { name: string; type: 'PERCENTAGE' | 'FI
   return serialize(plan);
 }
 
+export async function deletePlan(id: string, actorUserId: string) {
+  const plan = await prisma.commissionPlan.findUnique({
+    where: { id },
+    include: { _count: { select: { partners: true } } },
+  });
+  if (!plan) throw ApiError.notFound('Komisyon plani bulunamadi.');
+
+  if (plan._count.partners > 0) {
+    throw ApiError.conflict(
+      `Bu plani ${plan._count.partners} paydas kullaniyor. Once bu paydaslara baska bir plan atayin ` +
+      'ya da kalici silme yerine plani "Pasif" yapin.',
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.commissionPlan.delete({ where: { id } });
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'COMMISSION_PLAN_DELETED',
+        entityType: 'CommissionPlan',
+        entityId: id,
+        beforeData: { name: plan.name },
+      },
+    });
+  });
+}
 export async function updatePlan(id: string, input: { name?: string; value?: number; isDefault?: boolean; isActive?: boolean }, actorUserId: string) {
   const existing = await prisma.commissionPlan.findUnique({ where: { id } });
   if (!existing) throw ApiError.notFound('Komisyon plani bulunamadi.');

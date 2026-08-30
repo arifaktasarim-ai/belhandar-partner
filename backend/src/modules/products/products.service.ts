@@ -89,6 +89,8 @@ export async function updateProduct(id: string, input: {
     });
 
     if (input.imageUrl) {
+      // Tek bir ana gorsel mantigi: eskisini sil, yenisini ekle (ust uste birikmesin)
+      await tx.productImage.deleteMany({ where: { productId: id } });
       await tx.productImage.create({ data: { productId: id, url: input.imageUrl, sortOrder: 0 } });
     }
 
@@ -107,6 +109,79 @@ export async function updateProduct(id: string, input: {
   });
 
   return updated;
+}
+
+export async function deleteProduct(productId: string, actorUserId: string) {
+  const product = await prisma.product.findUnique({ where: { id: productId }, include: { variants: true } });
+  if (!product) throw ApiError.notFound('Urun bulunamadi.');
+
+  const variantIds = product.variants.map((v) => v.id);
+  const [saleCount, orderCount, movementCount] = await Promise.all([
+    prisma.saleItem.count({ where: { variantId: { in: variantIds } } }),
+    prisma.orderItem.count({ where: { variantId: { in: variantIds } } }),
+    prisma.stockMovement.count({ where: { variantId: { in: variantIds } } }),
+  ]);
+
+  if (saleCount > 0 || orderCount > 0 || movementCount > 0) {
+    throw ApiError.conflict(
+      'Bu urunun satis, siparis veya stok hareketi gecmisi oldugu icin silinemez. ' +
+      'Kalici silme yerine urunu "Pasif" yapmanizi oneririz.',
+    );
+  }
+
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.partnerStock.deleteMany({ where: { variantId: { in: variantIds } } });
+    await tx.productImage.deleteMany({ where: { productId } });
+    await tx.productVariant.deleteMany({ where: { productId } });
+    await tx.product.delete({ where: { id: productId } });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'PRODUCT_DELETED',
+        entityType: 'Product',
+        entityId: productId,
+        beforeData: { name: product.name, productCode: product.productCode },
+      },
+    });
+  });
+}
+
+export async function deleteVariant(variantId: string, actorUserId: string) {
+  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
+  if (!variant) throw ApiError.notFound('Varyant bulunamadi.');
+
+  const [saleCount, orderCount, movementCount, siblingCount] = await Promise.all([
+    prisma.saleItem.count({ where: { variantId } }),
+    prisma.orderItem.count({ where: { variantId } }),
+    prisma.stockMovement.count({ where: { variantId } }),
+    prisma.productVariant.count({ where: { productId: variant.productId } }),
+  ]);
+
+  if (saleCount > 0 || orderCount > 0 || movementCount > 0) {
+    throw ApiError.conflict(
+      'Bu varyantin satis, siparis veya stok hareketi gecmisi oldugu icin silinemez. ' +
+      'Kalici silme yerine varyanti "Pasif" yapmanizi oneririz.',
+    );
+  }
+  if (siblingCount <= 1) {
+    throw ApiError.badRequest('Bir urunun en az 1 varyanti olmalidir. Once yeni bir varyant ekleyin ya da urunun tamamini silin.');
+  }
+
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.partnerStock.deleteMany({ where: { variantId } });
+    await tx.productVariant.delete({ where: { id: variantId } });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'VARIANT_DELETED',
+        entityType: 'ProductVariant',
+        entityId: variantId,
+        beforeData: { sku: variant.sku, volumeMl: variant.volumeMl },
+      },
+    });
+  });
 }
 
 export async function addVariant(productId: string, input: {
