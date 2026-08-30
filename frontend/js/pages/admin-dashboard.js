@@ -28,7 +28,9 @@ const AdminDashboardPage = {
         <div class="stat-card"><div class="stat-label">Toplam Merkez Stok</div><div class="stat-value">${stats.totalCentralStock}</div></div>
         <div class="stat-card"><div class="stat-label">Bugunku Satis</div><div class="stat-value">${this.fmtTl(stats.todaySalesRevenueCents)}</div></div>
         <div class="stat-card"><div class="stat-label">Bu Ayki Satis</div><div class="stat-value">${this.fmtTl(stats.monthSalesRevenueCents)}</div></div>
-        <div class="stat-card"><div class="stat-label">Bu Ay Odenecek Kazanc</div><div class="stat-value">${this.fmtTl(stats.monthPayableEarningsCents)}</div></div>
+        <div class="stat-card"><div class="stat-label">Bekleyen Ödeme Talepleri</div><div class="stat-value">${this.fmtTl(stats.pendingPaymentRequestsCents)}</div>
+          ${stats.pendingPaymentRequestsCount > 0 ? `<div class="stat-sub"><a href="#/admin/payments" style="color:var(--gold-dim); font-weight:600;">${stats.pendingPaymentRequestsCount} talep var, incelemek icin tikla &rarr;</a></div>` : ''}
+        </div>
         <div class="stat-card"><div class="stat-label">Bekleyen Siparis</div><div class="stat-value">${stats.pendingOrders}</div></div>
         <div class="stat-card"><div class="stat-label">Uretimdeki Siparis</div><div class="stat-value">${stats.inProductionOrders}</div></div>
         <div class="stat-card"><div class="stat-label">Kargodaki Siparis</div><div class="stat-value">${stats.shippedOrders}</div></div>

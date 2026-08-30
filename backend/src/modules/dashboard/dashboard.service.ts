@@ -78,7 +78,7 @@ export async function getAdminDashboard() {
 
   const [
     partnerCounts, totalProducts, totalCentralStock, todaySales, monthSales,
-    monthPayableEarnings, orderCounts,
+    pendingPaymentRequests, orderCounts,
   ] = await Promise.all([
     prisma.user.groupBy({ by: ['status'], where: { role: 'PARTNER' }, _count: { _all: true } }),
     prisma.productVariant.count({ where: { isActive: true } }),
@@ -91,9 +91,10 @@ export async function getAdminDashboard() {
       where: { status: 'COMPLETED', saleDate: { gte: monthStart } },
       _sum: { totalAmountCents: true },
     }),
-    prisma.earning.aggregate({
-      where: { createdAt: { gte: monthStart } },
+    prisma.payment.aggregate({
+      where: { status: 'PENDING' },
       _sum: { amountCents: true },
+      _count: { _all: true },
     }),
     prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
   ]);
@@ -116,7 +117,8 @@ export async function getAdminDashboard() {
     totalCentralStock: totalCentralStock._sum.centralStock ?? 0,
     todaySalesRevenueCents: todaySales._sum.totalAmountCents ?? 0,
     monthSalesRevenueCents: monthSales._sum.totalAmountCents ?? 0,
-    monthPayableEarningsCents: monthPayableEarnings._sum.amountCents ?? 0,
+    pendingPaymentRequestsCents: pendingPaymentRequests._sum.amountCents ?? 0,
+    pendingPaymentRequestsCount: pendingPaymentRequests._count._all ?? 0,
     pendingOrders,
     inProductionOrders,
     shippedOrders,

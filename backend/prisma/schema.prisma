@@ -450,14 +450,18 @@ model Payment {
   partnerProfile   PartnerProfile @relation(fields: [partnerProfileId], references: [id])
 
   amountCents      Int
-  status           PaymentStatus  @default(PAID)
+  status           PaymentStatus  @default(PENDING)
   iban             String
   description      String?
 
-  paidById         String
-  paidBy           User           @relation("PaymentActor", fields: [paidById], references: [id])
+  // Paydas odeme talep ettiginde bu alanlar bos kalir; admin onayladiginda doldurulur.
+  paidById         String?
+  paidBy           User?          @relation("PaymentActor", fields: [paidById], references: [id])
+  paidAt           DateTime?
 
-  paidAt           DateTime       @default(now())
+  requestedByPartner Boolean      @default(false)
+  rejectionReason    String?
+
   createdAt        DateTime       @default(now())
 
   @@index([partnerProfileId])

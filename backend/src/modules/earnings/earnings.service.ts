@@ -18,7 +18,7 @@ export async function getEarningsSummary(partnerProfileId: string) {
   const thisMonth = monthRange(0);
   const lastMonth = monthRange(-1);
 
-  const [totalAgg, thisMonthAgg, lastMonthAgg, paidAgg] = await Promise.all([
+  const [totalAgg, thisMonthAgg, lastMonthAgg, paidAgg, pendingRequestAgg] = await Promise.all([
     prisma.earning.aggregate({ where: { partnerProfileId }, _sum: { amountCents: true } }),
     prisma.earning.aggregate({
       where: { partnerProfileId, createdAt: { gte: thisMonth.start, lt: thisMonth.end } },
@@ -32,13 +32,19 @@ export async function getEarningsSummary(partnerProfileId: string) {
       where: { partnerProfileId, status: 'PAID' },
       _sum: { amountCents: true },
     }),
+    prisma.payment.aggregate({
+      where: { partnerProfileId, status: 'PENDING' },
+      _sum: { amountCents: true },
+    }),
   ]);
 
   const totalEarnedCents = totalAgg._sum.amountCents ?? 0;
   const thisMonthCents = thisMonthAgg._sum.amountCents ?? 0;
   const lastMonthCents = lastMonthAgg._sum.amountCents ?? 0;
   const paidCents = paidAgg._sum.amountCents ?? 0;
-  const pendingCents = totalEarnedCents - paidCents;
+  const requestedCents = pendingRequestAgg._sum.amountCents ?? 0;
+  const pendingCents = totalEarnedCents - paidCents; // henuz odenmemis toplam (talep edilmis + edilmemis)
+  const availableToRequestCents = pendingCents - requestedCents; // yeni talep icin kullanilabilir tutar
 
   const changePct = lastMonthCents !== 0
     ? Math.round(((thisMonthCents - lastMonthCents) / Math.abs(lastMonthCents)) * 1000) / 10
@@ -51,6 +57,8 @@ export async function getEarningsSummary(partnerProfileId: string) {
     changePct,
     paidCents,
     pendingCents,
+    requestedCents,
+    availableToRequestCents,
   };
 }
 

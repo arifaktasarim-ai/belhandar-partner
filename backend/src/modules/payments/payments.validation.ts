@@ -6,3 +6,11 @@ export const createPaymentSchema = z.object({
   iban: z.string().min(10, 'Gecerli bir IBAN giriniz').optional(),
   description: z.string().optional(),
 });
+
+export const requestPaymentSchema = z.object({
+  amount: z.coerce.number().positive('Tutar pozitif olmalidir'),
+});
+
+export const rejectPaymentSchema = z.object({
+  reason: z.string().optional(),
+});

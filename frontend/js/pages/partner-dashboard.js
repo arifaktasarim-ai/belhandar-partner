@@ -51,19 +51,76 @@ const PartnerDashboardPage = {
         </div>
       </div>
 
-      <div class="card card-pad">
-        <div class="section-title">Hos geldiniz, ${user.firstName} ${user.lastName}</div>
-        <p class="text-muted">
-          Odenen: <strong>${this.fmtTl(earnings.paidCents)}</strong> ·
-          Bekleyen: <strong style="color:var(--amber);">${this.fmtTl(earnings.pendingCents)}</strong>
-        </p>
+      <div class="card card-pad" style="margin-bottom:20px;">
+        <div class="section-title">Cüzdanım</div>
+        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:16px;">
+          <div><div class="text-muted" style="font-size:12px;">Ödenen</div><div style="font-weight:700; font-size:16px;">${this.fmtTl(earnings.paidCents)}</div></div>
+          <div><div class="text-muted" style="font-size:12px;">Talep Edildi (Onay Bekliyor)</div><div style="font-weight:700; font-size:16px; color:var(--amber);">${this.fmtTl(earnings.requestedCents)}</div></div>
+          <div><div class="text-muted" style="font-size:12px;">Talep Edebileceğiniz Tutar</div><div style="font-weight:700; font-size:16px; color:var(--sage);">${this.fmtTl(earnings.availableToRequestCents)}</div></div>
+        </div>
+        <button class="btn btn-gold" id="btn-request-payment" ${earnings.availableToRequestCents <= 0 ? 'disabled' : ''}>Ödeme Talep Et</button>
+        <div id="request-payment-form" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="field" style="max-width:260px;">
+            <label>Talep Tutarı (TL)</label>
+            <input type="number" id="request-amount" step="0.01" min="0" max="${earnings.availableToRequestCents / 100}" value="${(earnings.availableToRequestCents / 100).toFixed(2)}" />
+          </div>
+          <div id="request-payment-error" class="field-error" style="display:none; margin-bottom:10px;"></div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-gold" id="btn-submit-request">Talebi Gönder</button>
+            <button class="btn btn-ghost" id="btn-cancel-request">Vazgeç</button>
+          </div>
+        </div>
       </div>
 
       <div class="section-title" style="margin-top:24px;">Ödeme Geçmişi</div>
       <div id="payment-history"></div>
     `;
 
+    const requestBtn = slot.querySelector('#btn-request-payment');
+    const requestForm = slot.querySelector('#request-payment-form');
+    requestBtn.addEventListener('click', () => {
+      requestForm.style.display = requestForm.style.display === 'none' ? 'block' : 'none';
+    });
+    slot.querySelector('#btn-cancel-request').addEventListener('click', () => {
+      requestForm.style.display = 'none';
+    });
+    slot.querySelector('#btn-submit-request').addEventListener('click', async () => {
+      const errorBox = slot.querySelector('#request-payment-error');
+      errorBox.style.display = 'none';
+      const amount = parseFloat(slot.querySelector('#request-amount').value);
+      if (!amount || amount <= 0) {
+        errorBox.textContent = 'Geçerli bir tutar giriniz.';
+        errorBox.style.display = 'block';
+        return;
+      }
+      const btn = slot.querySelector('#btn-submit-request');
+      btn.disabled = true;
+      try {
+        await Api.post('/payments/request', { amount });
+        Toast.success('Ödeme talebiniz gönderildi.');
+        const [{ data: freshStats }, { data: freshEarnings }] = await Promise.all([
+          Api.get('/dashboard/partner'),
+          Api.get('/earnings/me/summary'),
+        ]);
+        this.renderContent(slot, user, freshStats, freshEarnings);
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+        btn.disabled = false;
+      }
+    });
+
     this.loadPaymentHistory(slot.querySelector('#payment-history'));
+  },
+
+  statusBadge(status) {
+    const map = {
+      PENDING: ['badge-gold', 'Onay Bekliyor'],
+      PAID: ['badge-sage', 'Ödendi'],
+      CANCELLED: ['badge-wine', 'Reddedildi'],
+    };
+    const [cls, label] = map[status] || ['badge-neutral', status];
+    return `<span class="badge ${cls}">${label}</span>`;
   },
 
   async loadPaymentHistory(wrap) {
@@ -71,19 +128,20 @@ const PartnerDashboardPage = {
     try {
       const { data: payments } = await Api.get('/payments/me');
       if (!payments.length) {
-        wrap.innerHTML = `<div class="card card-pad text-muted">Henüz ödeme yapılmadı.</div>`;
+        wrap.innerHTML = `<div class="card card-pad text-muted">Henüz ödeme talebiniz veya kaydınız yok.</div>`;
         return;
       }
       wrap.innerHTML = `
         <div class="card table-wrap">
           <table>
-            <thead><tr><th>Tarih</th><th>Tutar</th><th>Açıklama</th></tr></thead>
+            <thead><tr><th>Tarih</th><th>Tutar</th><th>Durum</th><th>Açıklama</th></tr></thead>
             <tbody>
               ${payments.map((p) => `
                 <tr>
-                  <td class="mono">${new Date(p.paidAt).toLocaleDateString('tr-TR')}</td>
+                  <td class="mono">${new Date(p.paidAt || p.createdAt).toLocaleDateString('tr-TR')}</td>
                   <td>${this.fmtTl(p.amountCents)}</td>
-                  <td class="text-muted">${p.description || '—'}</td>
+                  <td>${this.statusBadge(p.status)}</td>
+                  <td class="text-muted">${p.description || p.rejectionReason || '—'}</td>
                 </tr>
               `).join('')}
             </tbody>
