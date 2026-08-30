@@ -63,6 +63,14 @@
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
     render: (c) => AdminStocksPage.render(c),
   });
+  Router.register('/admin/sales', {
+    requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
+    render: (c) => AdminSalesPage.render(c),
+  });
+  Router.register('/admin/customers', {
+    requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
+    render: (c) => AdminCustomersPage.render(c),
+  });
   Router.register('/admin/payments', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
     render: (c) => AdminPaymentsPage.render(c),

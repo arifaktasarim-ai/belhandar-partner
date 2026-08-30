@@ -125,7 +125,7 @@ const PartnerSalesPage = {
       wrap.innerHTML = `
         <div class="card table-wrap">
           <table>
-            <thead><tr><th>Tarih</th><th>Ürün</th><th>Tutar</th><th>Kazanç</th><th>Kanal</th><th>Durum</th><th></th></tr></thead>
+            <thead><tr><th>Tarih</th><th>Ürün</th><th>Tutar</th><th>Kazanç</th><th>Müşteri</th><th>Kanal</th><th>Durum</th><th></th></tr></thead>
             <tbody>
               ${sales.map((s) => `
                 <tr>
@@ -133,6 +133,11 @@ const PartnerSalesPage = {
                   <td>${s.items.map((i) => `${i.variant.product.name} x${i.quantity}`).join(', ')}</td>
                   <td>${this.fmtTl(s.totalAmountCents)}</td>
                   <td style="color:var(--sage); font-weight:600;">${this.fmtTl(s.totalProfitCents)}</td>
+                  <td style="font-size:12.5px;">
+                    ${s.customerName ? `<div style="font-weight:600;">${s.customerName}</div>` : '<span class="text-muted">—</span>'}
+                    ${s.customerPhone ? `<div class="text-muted mono" style="font-size:11px;">${s.customerPhone}</div>` : ''}
+                    ${s.note ? `<div class="text-muted" style="font-size:11px; font-style:italic;">"${s.note}"</div>` : ''}
+                  </td>
                   <td>${s.channel === 'KARGO' ? 'Kargo' : 'Elden'}</td>
                   <td>${s.status === 'VOID' ? '<span class="badge badge-wine">İptal</span>' : '<span class="badge badge-sage">Tamamlandı</span>'}</td>
                   <td>${s.status === 'COMPLETED' ? `<button class="btn btn-outline" data-void="${s.id}" style="padding:5px 10px; min-height:auto; font-size:12px;">İptal Et</button>` : ''}</td>

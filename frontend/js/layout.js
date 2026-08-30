@@ -33,6 +33,8 @@ const Layout = (() => {
     { path: '/admin/orders', label: 'Siparisler', icon: 'order' },
     { path: '/admin/production', label: 'Uretim', icon: 'production' },
     { path: '/admin/stocks', label: 'Stok', icon: 'stock' },
+    { path: '/admin/sales', label: 'Paydas Satislari', icon: 'sale' },
+    { path: '/admin/customers', label: 'Musteriler', icon: 'partners' },
     { path: '/admin/payments', label: 'Odemeler', icon: 'payments' },
     { path: '/admin/reports', label: 'Raporlar', icon: 'reports' },
     { path: '/admin/settings', label: 'Ayarlar', icon: 'settings' },
@@ -41,8 +43,11 @@ const Layout = (() => {
   // Mobil alt navigasyon icin kisitli, en sik kullanilan 5 ogeye indirgenmis liste (madde 22)
   const PARTNER_BOTTOM = PARTNER_NAV;
   const ADMIN_BOTTOM = [
-    ADMIN_NAV[0], ADMIN_NAV[1], ADMIN_NAV[3], ADMIN_NAV[6],
-    { path: '/admin/settings', label: 'Ayarlar', icon: 'settings' },
+    ADMIN_NAV.find((n) => n.path === '/admin/dashboard'),
+    ADMIN_NAV.find((n) => n.path === '/admin/partners'),
+    ADMIN_NAV.find((n) => n.path === '/admin/orders'),
+    ADMIN_NAV.find((n) => n.path === '/admin/sales'),
+    ADMIN_NAV.find((n) => n.path === '/admin/settings'),
   ];
 
   function initials(user) {
