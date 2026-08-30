@@ -2,6 +2,7 @@ import { Prisma, CommissionType } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../utils/apiError';
 import { tlToCents, calcPercentageProfitCents } from '../../utils/money';
+import { sendPushToUsers } from '../../utils/push';
 
 export async function getPartnerProfileIdForUser(userId: string): Promise<string> {
   const profile = await prisma.partnerProfile.findUnique({ where: { userId } });
@@ -123,10 +124,39 @@ export async function createSale(
       },
     });
 
-    return created;
+    // Adminlere bildirim (yeni satis)
+    const admins = await tx.user.findMany({
+      where: { role: { in: ['ADMIN', 'SUPER_ADMIN'] }, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    const partnerUser = await tx.partnerProfile.findUnique({
+      where: { id: partnerProfileId },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    });
+    const productNames = created.items.map((i) => i.variant.product.name).join(', ');
+    if (admins.length > 0 && partnerUser) {
+      await tx.notification.createMany({
+        data: admins.map((a: { id: string }) => ({
+          userId: a.id,
+          type: 'GENERIC' as const,
+          title: 'Yeni satış',
+          message: `${partnerUser.user.firstName} ${partnerUser.user.lastName}, ${productNames} sattı.`,
+        })),
+      });
+    }
+
+    return { created, adminIds: admins.map((a: { id: string }) => a.id), partnerUser, productNames };
   });
 
-  return sale;
+  await sendPushToUsers(sale.adminIds, {
+    title: 'Yeni satış',
+    body: sale.partnerUser
+      ? `${sale.partnerUser.user.firstName} ${sale.partnerUser.user.lastName}, ${sale.productNames} sattı.`
+      : 'Yeni bir satış yapıldı.',
+    url: '/#/admin/sales',
+  });
+
+  return sale.created;
 }
 
 export async function listSales(filter: { partnerProfileId?: string; take?: number }) {

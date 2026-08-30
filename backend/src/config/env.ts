@@ -12,6 +12,10 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL zorunludur'),
   DIRECT_URL: z.string().min(1, 'DIRECT_URL zorunludur (Supabase/pooler kullaniyorsaniz migrate icin gerekli)'),
 
+  VAPID_PUBLIC_KEY: z.string().min(1, 'VAPID_PUBLIC_KEY zorunludur (push bildirimleri icin)'),
+  VAPID_PRIVATE_KEY: z.string().min(1, 'VAPID_PRIVATE_KEY zorunludur (push bildirimleri icin)'),
+  VAPID_SUBJECT: z.string().default('mailto:destek@belhandar.com'),
+
   JWT_ACCESS_SECRET: z.string().min(16, 'JWT_ACCESS_SECRET en az 16 karakter olmalidir'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET en az 16 karakter olmalidir'),

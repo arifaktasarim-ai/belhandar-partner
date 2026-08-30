@@ -51,6 +51,9 @@ const Router = (() => {
       if (match.roles && !match.roles.includes(user.role)) {
         return navigate(user.role === 'PARTNER' ? '/partner/dashboard' : '/admin/dashboard');
       }
+      if (user.status === 'ACTIVE' && typeof Push !== 'undefined') {
+        Push.init();
+      }
     }
 
     rootEl.innerHTML = '';

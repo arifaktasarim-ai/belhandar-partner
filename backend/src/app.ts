@@ -24,6 +24,7 @@ import settingsRoutes from './modules/settings/settings.routes';
 import auditLogsRoutes from './modules/audit-logs/audit-logs.routes';
 import usersRoutes from './modules/users/users.routes';
 import customersRoutes from './modules/customers/customers.routes';
+import pushRoutes from './modules/push/push.routes';
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/admin/audit-logs', auditLogsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/admin/customers', customersRoutes);
+app.use('/api/push', pushRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);

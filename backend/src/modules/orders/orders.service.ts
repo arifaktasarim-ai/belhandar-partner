@@ -1,6 +1,7 @@
 import { OrderStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../utils/apiError';
+import { sendPushToUsers, sendPushToUser } from '../../utils/push';
 
 async function generateOrderNumber(tx: Prisma.TransactionClient): Promise<string> {
   const year = new Date().getFullYear();
@@ -82,10 +83,17 @@ export async function createOrder(
       });
     }
 
-    return created;
+    return { created, adminIds: admins.map((a: { id: string }) => a.id) };
   });
 
-  return order;
+  // Push bildirimi transaction disinda gonderilir (network cagrisi, DB islemini bekletmemeli)
+  await sendPushToUsers(order.adminIds, {
+    title: 'Yeni sipariş',
+    body: `${order.created.orderNumber} numaralı yeni bir sipariş alındı.`,
+    url: '/#/admin/orders',
+  });
+
+  return order.created;
 }
 
 export async function listOrders(filter: { partnerProfileId?: string; status?: OrderStatus }) {
@@ -172,30 +180,48 @@ export async function changeOrderStatus(
       }
     }
 
-    // Paydasa bildirim
+    // Paydasa bildirim (tum durum degisiklikleri icin)
     const partner = await tx.partnerProfile.findUnique({ where: { id: order.partnerProfileId } });
+    const statusMessages: Record<OrderStatus, string> = {
+      PENDING_APPROVAL: 'Siparisiniz alindi, onay bekliyor.',
+      APPROVED: 'Siparisiniz onaylandi.',
+      REJECTED: 'Siparisiniz reddedildi.',
+      IN_PRODUCTION_QUEUE: 'Siparisiniz uretim kuyruguna alindi.',
+      IN_PRODUCTION: 'Siparisiniz uretime alindi.',
+      QUALITY_CHECK: 'Siparisiniz kalite kontrolden geciyor.',
+      READY: 'Siparisiniz hazir, kargoya verilmeyi bekliyor.',
+      SHIPPED: 'Siparisiniz kargoya verildi.',
+      DELIVERED: 'Siparisiniz teslim edildi, stoklariniza eklendi.',
+      CANCELLED: 'Siparisiniz iptal edildi.',
+    };
+    let partnerUserId: string | null = null;
     if (partner) {
-      const statusMessages: Partial<Record<OrderStatus, string>> = {
-        APPROVED: 'Siparisiniz onaylandi.',
-        REJECTED: 'Siparisiniz reddedildi.',
-        IN_PRODUCTION: 'Siparisiniz uretime alindi.',
-        SHIPPED: 'Siparisiniz kargoya verildi.',
-        DELIVERED: 'Siparisiniz teslim edildi, stoklariniza eklendi.',
+      partnerUserId = partner.userId;
+      const notifTypeMap: Partial<Record<OrderStatus, 'ORDER_SHIPPED' | 'ORDER_DELIVERED' | 'ORDER_APPROVED'>> = {
+        SHIPPED: 'ORDER_SHIPPED',
+        DELIVERED: 'ORDER_DELIVERED',
+        APPROVED: 'ORDER_APPROVED',
       };
-      if (statusMessages[newStatus]) {
-        await tx.notification.create({
-          data: {
-            userId: partner.userId,
-            type: newStatus === 'SHIPPED' ? 'ORDER_SHIPPED' : newStatus === 'DELIVERED' ? 'ORDER_DELIVERED' : 'ORDER_APPROVED',
-            title: 'Siparis durumu guncellendi',
-            message: statusMessages[newStatus]!,
-          },
-        });
-      }
+      await tx.notification.create({
+        data: {
+          userId: partner.userId,
+          type: notifTypeMap[newStatus] ?? 'GENERIC',
+          title: `Siparis ${order.orderNumber}`,
+          message: statusMessages[newStatus],
+        },
+      });
     }
 
-    return result;
+    return { result, partnerUserId, message: statusMessages[newStatus] };
   });
 
-  return updated;
+  if (updated.partnerUserId) {
+    await sendPushToUser(updated.partnerUserId, {
+      title: `Sipariş ${order.orderNumber}`,
+      body: updated.message,
+      url: '/#/partner/orders',
+    });
+  }
+
+  return updated.result;
 }

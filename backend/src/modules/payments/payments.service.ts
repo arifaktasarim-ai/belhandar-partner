@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../utils/apiError';
 import { tlToCents } from '../../utils/money';
+import { sendPushToUsers, sendPushToUser } from '../../utils/push';
 
 export async function getPartnerProfileIdForUser(userId: string): Promise<string> {
   const profile = await prisma.partnerProfile.findUnique({ where: { userId } });
@@ -108,10 +109,16 @@ export async function requestPayment(partnerProfileId: string, amount: number) {
       });
     }
 
-    return created;
+    return { created, adminIds: admins.map((a: { id: string }) => a.id) };
   });
 
-  return payment;
+  await sendPushToUsers(payment.adminIds, {
+    title: 'Yeni ödeme talebi',
+    body: `Bir paydaş ${(amountCents / 100).toLocaleString('tr-TR')} TL tutarında ödeme talep etti.`,
+    url: '/#/admin/payments',
+  });
+
+  return payment.created;
 }
 
 export async function approvePaymentRequest(paymentId: string, actorUserId: string) {
@@ -145,6 +152,12 @@ export async function approvePaymentRequest(paymentId: string, actorUserId: stri
     });
 
     return result;
+  });
+
+  await sendPushToUser(payment.partnerProfile.userId, {
+    title: 'Ödeme talebiniz onaylandı',
+    body: `${(payment.amountCents / 100).toLocaleString('tr-TR')} TL tutarındaki ödemeniz gerçekleşti.`,
+    url: '/#/partner/dashboard',
   });
 
   return updated;
@@ -181,6 +194,12 @@ export async function rejectPaymentRequest(paymentId: string, actorUserId: strin
     });
 
     return result;
+  });
+
+  await sendPushToUser(payment.partnerProfile.userId, {
+    title: 'Ödeme talebiniz reddedildi',
+    body: reason || 'Ödeme talebiniz yönetici tarafından reddedildi.',
+    url: '/#/partner/dashboard',
   });
 
   return updated;
