@@ -27,6 +27,7 @@ import customersRoutes from './modules/customers/customers.routes';
 import pushRoutes from './modules/push/push.routes';
 
 const app = express();
+app.set('trust proxy', 1);
 
 // --- Guvenlik & temel middleware'ler ---
 app.use(helmet());
