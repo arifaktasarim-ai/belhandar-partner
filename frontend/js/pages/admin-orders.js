@@ -100,7 +100,7 @@ const AdminOrdersPage = {
       <tr>
         <td class="mono">${o.orderNumber}</td>
         <td>${o.partnerProfile.user.firstName} ${o.partnerProfile.user.lastName}</td>
-        <td style="max-width:260px;">${o.items.map((i) => `${i.variant.product.name} (${i.variant.volumeMl}ml) x${i.quantity}`).join(', ')}</td>
+        <td style="max-width:260px;">${o.items.map((i) => `${i.variant.product.name} (${i.variant.volumeMl}ml) x${i.quantity}${i.testerQuantity > 0 ? ` <span class="text-muted">(+${i.testerQuantity} tester)</span>` : ''}`).join(', ')}</td>
         <td>${this.fmtTl(o.totalAmountCents)}</td>
         <td><span class="badge ${cls}">${label}</span></td>
         <td style="white-space:nowrap;">${this.statusSelectHtml(o)}</td>
@@ -117,7 +117,7 @@ const AdminOrdersPage = {
           <span class="badge ${cls}">${label}</span>
         </div>
         <div style="font-weight:600; margin-top:6px;">${o.partnerProfile.user.firstName} ${o.partnerProfile.user.lastName}</div>
-        <div class="text-muted" style="font-size:12.5px; margin:4px 0;">${o.items.map((i) => `${i.variant.product.name} x${i.quantity}`).join(', ')}</div>
+        <div class="text-muted" style="font-size:12.5px; margin:4px 0;">${o.items.map((i) => `${i.variant.product.name} x${i.quantity}${i.testerQuantity > 0 ? ` (+${i.testerQuantity} tester)` : ''}`).join(', ')}</div>
         <div class="record-card-row"><span class="label">Tutar</span><span>${this.fmtTl(o.totalAmountCents)}</span></div>
         <div style="margin-top:8px;">${this.statusSelectHtml(o)}</div>
       </div>

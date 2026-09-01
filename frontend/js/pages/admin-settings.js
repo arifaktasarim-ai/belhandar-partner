@@ -43,12 +43,46 @@ const AdminSettingsPage = {
         </form>
       </div>
 
+      <div class="card card-pad" style="max-width:600px; margin-top:20px;">
+        <div class="section-title">Şifre Değiştir</div>
+        <form id="password-form">
+          <div class="field"><label>Mevcut Şifre</label><input name="currentPassword" type="password" required /></div>
+          <div class="field"><label>Yeni Şifre</label><input name="newPassword" type="password" required minlength="8" /></div>
+          <div id="password-form-error" class="field-error" style="display:none; margin-bottom:12px;"></div>
+          <button type="submit" class="btn btn-outline">Şifreyi Değiştir</button>
+        </form>
+      </div>
+
       <div class="section-title" style="margin-top:28px;">Sistem Kayıtları (Son 200 İşlem)</div>
       <div id="audit-log-wrap"></div>
     `;
 
     slot.querySelector('#settings-form').addEventListener('submit', (e) => this.submit(e, slot));
+    slot.querySelector('#password-form').addEventListener('submit', (e) => this.submitPassword(e, slot));
     this.loadAuditLogs(slot.querySelector('#audit-log-wrap'));
+  },
+
+  async submitPassword(e, slot) {
+    e.preventDefault();
+    const form = e.target;
+    const errorBox = slot.querySelector('#password-form-error');
+    errorBox.style.display = 'none';
+
+    const fd = new FormData(form);
+    const payload = Object.fromEntries(fd.entries());
+
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      await Api.post('/users/me/change-password', payload);
+      Toast.success('Şifreniz güncellendi.');
+      form.reset();
+    } catch (err) {
+      errorBox.textContent = err.message;
+      errorBox.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+    }
   },
 
   ACTION_LABELS: {

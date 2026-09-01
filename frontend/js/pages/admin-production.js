@@ -53,7 +53,7 @@ const AdminProductionPage = {
         <div class="mono" style="font-weight:600; font-size:12.5px;">${o.orderNumber}</div>
         <div style="font-size:12.5px; margin:4px 0;">${o.partnerProfile.user.firstName} ${o.partnerProfile.user.lastName}</div>
         <div class="text-muted" style="font-size:11.5px; margin-bottom:8px;">
-          ${o.items.map((i) => `${i.variant.product.name} x${i.quantity}`).join(', ')}
+          ${o.items.map((i) => `${i.variant.product.name} x${i.quantity}${i.testerQuantity > 0 ? ` (+${i.testerQuantity} tester)` : ''}`).join(', ')}
         </div>
         <div class="text-muted" style="font-size:11.5px; margin-bottom:8px;">${this.fmtTl(o.totalAmountCents)}</div>
         ${stage.next ? `<button class="btn btn-outline btn-block" data-advance="${o.id}" data-next="${stage.next}" style="padding:6px; min-height:auto; font-size:12px;">${stage.next === 'DELIVERED' ? 'Teslim Edildi →' : 'Sonraki Aşama →'}</button>` : ''}

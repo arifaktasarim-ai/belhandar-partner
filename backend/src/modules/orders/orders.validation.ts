@@ -4,6 +4,7 @@ export const createOrderSchema = z.object({
   items: z.array(z.object({
     variantId: z.string().min(1),
     quantity: z.coerce.number().int().positive('Adet pozitif olmalidir'),
+    testerQuantity: z.coerce.number().int().min(0).optional().default(0),
   })).min(1, 'En az 1 urun eklemelisiniz'),
 });
 

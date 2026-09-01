@@ -76,7 +76,7 @@ const PartnerOrdersPage = {
                   <tr>
                     <td class="mono">${o.orderNumber}</td>
                     <td class="mono">${new Date(o.createdAt).toLocaleDateString('tr-TR')}</td>
-                    <td>${o.items.map((i) => `${i.variant.product.name} (${i.variant.volumeMl}ml) x${i.quantity}`).join(', ')}</td>
+                    <td>${o.items.map((i) => `${i.variant.product.name} (${i.variant.volumeMl}ml) x${i.quantity}${i.testerQuantity > 0 ? ` <span class="text-muted">(+${i.testerQuantity} tester)</span>` : ''}`).join(', ')}</td>
                     <td>${this.fmtTl(o.totalAmountCents)}</td>
                     <td><span class="badge ${cls}">${label}</span></td>
                   </tr>
@@ -94,7 +94,7 @@ const PartnerOrdersPage = {
                   <span class="mono" style="font-weight:600">${o.orderNumber}</span>
                   <span class="badge ${cls}">${label}</span>
                 </div>
-                <div class="text-muted" style="font-size:12.5px; margin:6px 0;">${o.items.map((i) => `${i.variant.product.name} x${i.quantity}`).join(', ')}</div>
+                <div class="text-muted" style="font-size:12.5px; margin:6px 0;">${o.items.map((i) => `${i.variant.product.name} x${i.quantity}${i.testerQuantity > 0 ? ` (+${i.testerQuantity} tester)` : ''}`).join(', ')}</div>
                 <div class="record-card-row"><span class="label">Tutar</span><span>${this.fmtTl(o.totalAmountCents)}</span></div>
               </div>
             `;
@@ -122,9 +122,16 @@ const PartnerOrdersPage = {
             <div style="font-weight:600">${p.name} <span class="text-muted" style="font-weight:400">(${v.volumeMl} ml)</span></div>
             <div class="text-muted" style="font-size:12px">${this.fmtTl(v.partnerPriceCents)} / adet</div>
           </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <input type="number" min="1" value="1" data-qty="${v.id}" style="width:64px; padding:7px 8px; border:1px solid var(--border-strong); border-radius:6px;" />
-            <button class="btn btn-outline" data-add="${v.id}" style="padding:7px 12px; min-height:auto;">Ekle</button>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <label class="text-muted" style="font-size:10px;">Adet</label>
+              <input type="number" min="1" value="1" data-qty="${v.id}" style="width:60px; padding:7px 8px; border:1px solid var(--border-strong); border-radius:6px;" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <label class="text-muted" style="font-size:10px;">Tester</label>
+              <input type="number" min="0" value="0" data-tester="${v.id}" style="width:60px; padding:7px 8px; border:1px solid var(--border-strong); border-radius:6px;" />
+            </div>
+            <button class="btn btn-outline" data-add="${v.id}" style="padding:7px 12px; min-height:auto; align-self:flex-end;">Ekle</button>
           </div>
         </div>
       `).join('')).join('');
@@ -133,10 +140,12 @@ const PartnerOrdersPage = {
         btn.addEventListener('click', () => {
           const variantId = btn.dataset.add;
           const qtyInput = wrap.querySelector(`[data-qty="${variantId}"]`);
+          const testerInput = wrap.querySelector(`[data-tester="${variantId}"]`);
           const quantity = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+          const testerQuantity = Math.max(0, parseInt(testerInput.value, 10) || 0);
           const existing = this.cart.find((c) => c.variantId === variantId);
-          if (existing) existing.quantity = quantity;
-          else this.cart.push({ variantId, quantity });
+          if (existing) { existing.quantity = quantity; existing.testerQuantity = testerQuantity; }
+          else this.cart.push({ variantId, quantity, testerQuantity });
           this.renderCart(slot);
           Toast.success('Sepete eklendi.');
         });
@@ -168,7 +177,7 @@ const PartnerOrdersPage = {
       total += lineTotal;
       return `
         <div style="display:flex; justify-content:space-between; padding:6px 0;">
-          <span>${found.product.name} (${found.variant.volumeMl}ml) x${item.quantity}</span>
+          <span>${found.product.name} (${found.variant.volumeMl}ml) x${item.quantity} ${item.testerQuantity > 0 ? `<span class="text-muted">(+${item.testerQuantity} tester)</span>` : ''}</span>
           <span>${this.fmtTl(lineTotal)}</span>
         </div>
       `;
@@ -179,6 +188,7 @@ const PartnerOrdersPage = {
       <div style="display:flex; justify-content:space-between; font-weight:700; padding-top:8px; border-top:1px solid var(--border); margin-top:6px;">
         <span>Toplam</span><span>${this.fmtTl(total)}</span>
       </div>
+      <p class="text-muted" style="font-size:11.5px; margin-top:6px;">Tester adetleri ücretsizdir, toplam tutara dahil edilmez.</p>
     `;
   },
 

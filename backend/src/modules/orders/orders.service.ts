@@ -18,7 +18,7 @@ export async function getPartnerProfileIdForUser(userId: string): Promise<string
 
 export async function createOrder(
   partnerProfileId: string,
-  items: { variantId: string; quantity: number }[],
+  items: { variantId: string; quantity: number; testerQuantity?: number }[],
   actorUserId: string,
 ) {
   const variantIds = items.map((i) => i.variantId);
@@ -34,6 +34,7 @@ export async function createOrder(
 
   const variantMap = new Map(variants.map((v) => [v.id, v]));
   let totalAmountCents = 0;
+  // Not: tester (numune) adedi ucretsizdir, siparis tutarina dahil edilmez - sadece bilgi amaclidir.
   const orderItemsData = items.map((item) => {
     const variant = variantMap.get(item.variantId)!;
     const lineTotal = variant.partnerPriceCents * item.quantity;
@@ -42,6 +43,7 @@ export async function createOrder(
       variantId: item.variantId,
       quantity: item.quantity,
       unitPriceCents: variant.partnerPriceCents,
+      testerQuantity: item.testerQuantity ?? 0,
     };
   });
 

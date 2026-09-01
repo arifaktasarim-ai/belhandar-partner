@@ -419,6 +419,7 @@ model OrderItem {
 
   quantity       Int
   unitPriceCents Int // siparis anindaki paydas fiyati (snapshot)
+  testerQuantity Int            @default(0) // paydasin talep ettigi bedava numune/tester adedi (ucretsiz, siparis tutarina eklenmez)
 
   @@map("order_items")
 }
