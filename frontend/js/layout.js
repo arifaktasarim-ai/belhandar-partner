@@ -75,6 +75,7 @@ const Layout = (() => {
             ${nav.map((n) => `
               <a class="nav-item" data-path="${n.path}" href="#${n.path}">
                 ${ICONS[n.icon]}<span>${n.label}</span>
+                <span class="nav-badge" data-nav-badge="${n.path}" style="display:none;"></span>
               </a>`).join('')}
           </nav>
           <div class="sidebar-foot">
@@ -112,7 +113,11 @@ const Layout = (() => {
         <nav class="bottom-nav" data-bottom-nav-root>
           ${bottomNav.map((n) => `
             <a class="bottom-nav-item" data-path="${n.path}" href="#${n.path}">
-              ${ICONS[n.icon]}<span>${n.label}</span>
+              <span style="position:relative;">
+                ${ICONS[n.icon]}
+                <span class="nav-badge-dot" data-nav-badge-dot="${n.path}" style="display:none;"></span>
+              </span>
+              <span>${n.label}</span>
             </a>`).join('')}
         </nav>
       </div>
@@ -128,6 +133,7 @@ const Layout = (() => {
     });
 
     initNotifications(container);
+    if (isAdmin) initNavBadges(container);
 
     return container.querySelector('[data-page-slot]');
   }
@@ -207,6 +213,32 @@ const Layout = (() => {
     document.querySelectorAll('.nav-item, .bottom-nav-item').forEach((el) => {
       el.classList.toggle('active', el.dataset.path === path);
     });
+  }
+
+  async function initNavBadges(container) {
+    try {
+      const { data } = await Api.get('/dashboard/admin/badges');
+      const badgeMap = {
+        '/admin/partners': data.pendingPartners,
+        '/admin/orders': data.pendingOrders,
+        '/admin/payments': data.pendingPayments,
+      };
+      Object.entries(badgeMap).forEach(([path, count]) => {
+        container.querySelectorAll(`[data-nav-badge="${path}"]`).forEach((el) => {
+          if (count > 0) {
+            el.textContent = count > 99 ? '99+' : count;
+            el.style.display = 'inline-flex';
+          } else {
+            el.style.display = 'none';
+          }
+        });
+        container.querySelectorAll(`[data-nav-badge-dot="${path}"]`).forEach((el) => {
+          el.style.display = count > 0 ? 'block' : 'none';
+        });
+      });
+    } catch (_e) {
+      // rozet opsiyoneldir, sessiz gec
+    }
   }
 
   return { renderShell, highlightActiveNav };

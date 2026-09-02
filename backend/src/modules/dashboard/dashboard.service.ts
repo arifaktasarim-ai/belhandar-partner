@@ -71,6 +71,15 @@ export async function getPartnerDashboard(partnerProfileId: string) {
   };
 }
 
+export async function getAdminBadgeCounts() {
+  const [pendingPartners, pendingOrders, pendingPayments] = await Promise.all([
+    prisma.user.count({ where: { role: 'PARTNER', status: 'PENDING_APPROVAL' } }),
+    prisma.order.count({ where: { status: 'PENDING_APPROVAL' } }),
+    prisma.payment.count({ where: { status: 'PENDING' } }),
+  ]);
+  return { pendingPartners, pendingOrders, pendingPayments };
+}
+
 export async function getAdminDashboard() {
   const now = new Date();
   const todayStart = startOfDay(now);

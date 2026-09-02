@@ -20,6 +20,15 @@ router.get(
 );
 
 router.get(
+  '/admin/badges',
+  requireAdmin,
+  asyncHandler(async (_req: Request, res: Response) => {
+    const data = await service.getAdminBadgeCounts();
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
   '/admin',
   requireAdmin,
   asyncHandler(async (_req: Request, res: Response) => {
