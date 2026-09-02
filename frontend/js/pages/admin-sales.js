@@ -101,12 +101,13 @@ const AdminSalesPage = {
             <div class="text-muted mono" style="font-size:11.5px; margin-top:4px;">${new Date(s.saleDate).toLocaleDateString('tr-TR')}</div>
           </div>
         </div>
-        ${s.customerName || s.customerPhone || s.note ? `
+        ${s.customerName || s.customerPhone || s.note || s.channel === 'KARGO' ? `
           <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12.5px; display:flex; gap:16px; flex-wrap:wrap;">
             ${s.customerName ? `<span><span class="text-muted">Müşteri:</span> <strong>${s.customerName}</strong></span>` : ''}
             ${s.customerPhone ? `<span><span class="text-muted">Telefon:</span> <span class="mono">${s.customerPhone}</span></span>` : ''}
             ${s.note ? `<span><span class="text-muted">Not:</span> <em>"${s.note}"</em></span>` : ''}
             <span><span class="text-muted">Kanal:</span> ${s.channel === 'KARGO' ? 'Kargo' : 'Elden'}</span>
+            ${s.channel === 'KARGO' ? `<span><span class="text-muted">Kargo Ücreti:</span> ${this.fmtTl(s.shippingFeeCents || 0)} ${s.shippingPaidByAdmin ? '<span class="badge badge-gold" style="font-size:9.5px;">Belhandar öder</span>' : '<span class="text-muted" style="font-size:11px;">(karşı ödemeli)</span>'}</span>` : ''}
           </div>
         ` : ''}
         ${isVoid && s.voidReason ? `<div class="text-muted" style="font-size:11.5px; margin-top:6px;">İptal gerekçesi: ${s.voidReason}</div>` : ''}

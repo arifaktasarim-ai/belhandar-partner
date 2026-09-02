@@ -317,6 +317,18 @@ model StockMovement {
 // SALES
 // ----------------------------------------------------------------------------
 
+model ShippingRate {
+  id             String   @id @default(uuid())
+  minAmountCents Int      // bu tutar ve uzerinde gecerli (kurus)
+  maxAmountCents Int?     // null = ust sinir yok (bu ve uzeri icin)
+  feeCents       Int      // kargo ucreti (kurus)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("shipping_rates")
+}
+
 model Sale {
   id               String         @id @default(uuid())
   partnerProfileId String
@@ -333,6 +345,8 @@ model Sale {
 
   totalAmountCents  Int           // toplam satis tutari (kurus)
   totalProfitCents  Int           // paydasin toplam kazanci (kurus)
+  shippingFeeCents  Int?          // KARGO satislarda uygulanan kargo ucreti (kurus); ELDEN'de null
+  shippingPaidByAdmin Boolean     @default(false) // true ise kargo ucretini Belhandar karsilar, musteriden istenmez (varsayilan: karsi odemeli - musteri oder)
 
   voidedAt         DateTime?
   voidReason       String?

@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../utils/apiError';
 import { tlToCents, calcPercentageProfitCents } from '../../utils/money';
 import { sendPushToUsers } from '../../utils/push';
+import { calculateFeeForAmount } from '../shipping-rates/shipping-rates.service';
 
 export async function getPartnerProfileIdForUser(userId: string): Promise<string> {
   const profile = await prisma.partnerProfile.findUnique({ where: { userId } });
@@ -40,6 +41,7 @@ export async function createSale(
     customerPhone?: string;
     note?: string;
     saleDate?: string;
+    shippingPaidByAdmin?: boolean;
     items: { variantId: string; quantity: number; unitPrice: number }[];
   },
   actorUserId: string,
@@ -80,6 +82,9 @@ export async function createSale(
       };
     });
 
+    // KARGO satislarda tutar araligina gore kargo ucreti otomatik hesaplanir (admin belirledigi tarifeye gore)
+    const shippingFeeCents = input.channel === 'KARGO' ? await calculateFeeForAmount(totalAmountCents) : null;
+
     const created = await tx.sale.create({
       data: {
         partnerProfileId,
@@ -90,6 +95,8 @@ export async function createSale(
         saleDate: input.saleDate ? new Date(input.saleDate) : new Date(),
         totalAmountCents,
         totalProfitCents,
+        shippingFeeCents,
+        shippingPaidByAdmin: input.channel === 'KARGO' ? !!input.shippingPaidByAdmin : false,
         items: { create: saleItemsData },
       },
       include: { items: { include: { variant: { include: { product: true } } } } },

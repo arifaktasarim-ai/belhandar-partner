@@ -1,5 +1,6 @@
 const PartnerSalesPage = {
   stocks: [],
+  shippingRates: [],
 
   async render(container) {
     const slot = Layout.renderShell(container, { title: 'Satış' });
@@ -14,18 +15,25 @@ const PartnerSalesPage = {
                 <option value="">Seçiniz...</option>
               </select>
             </div>
-            <div class="field"><label>Adet</label><input name="quantity" type="number" min="1" value="1" required /></div>
+            <div class="field"><label>Adet</label><input name="quantity" type="number" min="1" value="1" id="sale-qty" required /></div>
           </div>
           <div class="field-row">
             <div class="field"><label>Satış Fiyatı (TL)</label><input name="unitPrice" id="sale-price" type="number" step="0.01" min="0" required /></div>
             <div class="field">
               <label>Teslimat</label>
-              <select name="channel" required>
+              <select name="channel" id="sale-channel" required>
                 <option value="ELDEN">Elden</option>
                 <option value="KARGO">Kargo</option>
               </select>
             </div>
           </div>
+          <div id="shipping-options" style="display:none; margin-bottom:14px;">
+            <div class="checkbox-row">
+              <input type="checkbox" id="shipping-paid-by-admin" name="shippingPaidByAdmin" />
+              <label for="shipping-paid-by-admin" style="margin:0">Kargo ücretini Belhandar karşılasın (müşteriden alınmayacak)</label>
+            </div>
+          </div>
+          <div id="shipping-preview" style="display:none; background:var(--ivory); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:16px; font-size:13px;"></div>
           <div class="field-row">
             <div class="field"><label>Müşteri Adı <span class="text-muted">(opsiyonel)</span></label><input name="customerName" /></div>
             <div class="field"><label>Müşteri Telefonu <span class="text-muted">(opsiyonel)</span></label><input name="customerPhone" /></div>
@@ -40,8 +48,66 @@ const PartnerSalesPage = {
     `;
 
     await this.loadStockOptions(slot);
+    await this.loadShippingRates();
+    this.bindShippingPreview(slot);
     slot.querySelector('#sale-form').addEventListener('submit', (e) => this.submitSale(e, slot));
     await this.loadSales(slot.querySelector('#sales-list'));
+  },
+
+  async loadShippingRates() {
+    try {
+      const { data } = await Api.get('/shipping-rates');
+      this.shippingRates = data;
+    } catch (_e) {
+      this.shippingRates = [];
+    }
+  },
+
+  calcShippingFee(amountCents) {
+    const match = this.shippingRates
+      .filter((r) => r.minAmountCents <= amountCents && (r.maxAmountCents === null || amountCents <= r.maxAmountCents))
+      .sort((a, b) => b.minAmountCents - a.minAmountCents)[0];
+    return match ? match.feeCents : 0;
+  },
+
+  bindShippingPreview(slot) {
+    const update = () => {
+      const channel = slot.querySelector('#sale-channel').value;
+      const qty = Number(slot.querySelector('#sale-qty').value) || 0;
+      const price = Number(slot.querySelector('#sale-price').value) || 0;
+      const preview = slot.querySelector('#shipping-preview');
+      const optionsWrap = slot.querySelector('#shipping-options');
+      const paidByAdmin = slot.querySelector('#shipping-paid-by-admin').checked;
+
+      optionsWrap.style.display = channel === 'KARGO' ? 'block' : 'none';
+
+      if (channel !== 'KARGO' || qty <= 0 || price <= 0) {
+        preview.style.display = 'none';
+        return;
+      }
+
+      const amountCents = Math.round(price * qty * 100);
+      const feeCents = this.calcShippingFee(amountCents);
+      const customerTotal = paidByAdmin ? amountCents : amountCents + feeCents;
+
+      preview.style.display = 'block';
+      preview.innerHTML = `
+        <div style="display:flex; justify-content:space-between;"><span class="text-muted">Ürün Tutarı</span><span>${this.fmtTl(amountCents)}</span></div>
+        <div style="display:flex; justify-content:space-between;">
+          <span class="text-muted">Kargo Ücreti</span>
+          <span>${this.fmtTl(feeCents)} ${paidByAdmin ? '<span class="text-muted">(Belhandar karşılıyor)</span>' : '<span class="text-muted">(karşı ödemeli)</span>'}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-weight:700; margin-top:4px; padding-top:4px; border-top:1px solid var(--border);">
+          <span>Müşteriden İstenecek Toplam</span><span>${this.fmtTl(customerTotal)}</span>
+        </div>
+        ${feeCents === 0 ? '<div class="text-muted" style="font-size:11px; margin-top:4px;">Bu tutar aralığı için henüz kargo ücreti tanımlanmamış.</div>' : ''}
+      `;
+    };
+
+    ['#sale-channel', '#sale-qty', '#sale-price', '#shipping-paid-by-admin'].forEach((sel) => {
+      slot.querySelector(sel).addEventListener('input', update);
+      slot.querySelector(sel).addEventListener('change', update);
+    });
   },
 
   fmtTl(cents) {
@@ -85,6 +151,7 @@ const PartnerSalesPage = {
       customerName: fd.get('customerName') || undefined,
       customerPhone: fd.get('customerPhone') || undefined,
       note: fd.get('note') || undefined,
+      shippingPaidByAdmin: slot.querySelector('#shipping-paid-by-admin').checked,
       items: [{
         variantId: fd.get('variantId'),
         quantity: Number(fd.get('quantity')),
@@ -125,13 +192,14 @@ const PartnerSalesPage = {
       wrap.innerHTML = `
         <div class="card table-wrap">
           <table>
-            <thead><tr><th>Tarih</th><th>Ürün</th><th>Tutar</th><th>Kazanç</th><th>Müşteri</th><th>Kanal</th><th>Durum</th><th></th></tr></thead>
+            <thead><tr><th>Tarih</th><th>Ürün</th><th>Tutar</th><th>Kargo</th><th>Kazanç</th><th>Müşteri</th><th>Kanal</th><th>Durum</th><th></th></tr></thead>
             <tbody>
               ${sales.map((s) => `
                 <tr>
                   <td class="mono">${new Date(s.saleDate).toLocaleDateString('tr-TR')}</td>
                   <td>${s.items.map((i) => `${i.variant.product.name} x${i.quantity}`).join(', ')}</td>
                   <td>${this.fmtTl(s.totalAmountCents)}</td>
+                  <td>${s.channel === 'KARGO' ? `${this.fmtTl(s.shippingFeeCents || 0)} ${s.shippingPaidByAdmin ? '<span class="badge badge-gold" style="font-size:9.5px;">Belhandar öder</span>' : ''}<div class="text-muted" style="font-size:10.5px;">Müşteri toplamı: ${this.fmtTl(s.totalAmountCents + (s.shippingPaidByAdmin ? 0 : (s.shippingFeeCents || 0)))}</div>` : '—'}</td>
                   <td style="color:var(--sage); font-weight:600;">${this.fmtTl(s.totalProfitCents)}</td>
                   <td style="font-size:12.5px;">
                     ${s.customerName ? `<div style="font-weight:600;">${s.customerName}</div>` : '<span class="text-muted">—</span>'}

@@ -25,9 +25,9 @@ import auditLogsRoutes from './modules/audit-logs/audit-logs.routes';
 import usersRoutes from './modules/users/users.routes';
 import customersRoutes from './modules/customers/customers.routes';
 import pushRoutes from './modules/push/push.routes';
+import shippingRatesRoutes from './modules/shipping-rates/shipping-rates.routes';
 
 const app = express();
-app.set('trust proxy', 1);
 
 // --- Guvenlik & temel middleware'ler ---
 app.use(helmet());
@@ -78,6 +78,7 @@ app.use('/api/admin/audit-logs', auditLogsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/admin/customers', customersRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/shipping-rates', shippingRatesRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);
