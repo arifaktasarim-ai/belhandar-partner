@@ -382,6 +382,55 @@ tr:hover td { background: rgba(176,141,63,0.035); }
 .section-title {
   font-family: var(--font-display); font-size: 17px; font-weight: 600; margin: 0 0 14px;
 }
+
+/* --------------------------------------------------------------------------
+   Ayarlar sayfasi: 2'li izgara + acilir/kapanir (accordion) kartlar
+   -------------------------------------------------------------------------- */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.settings-grid > .settings-full { grid-column: 1 / -1; }
+@media (max-width: 820px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+details.settings-card {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+details.settings-card > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  user-select: none;
+}
+details.settings-card > summary::-webkit-details-marker { display: none; }
+details.settings-card > summary .chevron {
+  width: 18px; height: 18px; flex-shrink: 0;
+  transition: transform 0.18s ease;
+  color: var(--text-muted);
+}
+details.settings-card[open] > summary .chevron { transform: rotate(180deg); }
+details.settings-card > summary .summary-hint {
+  font-family: var(--font-body); font-weight: 500; font-size: 12px; color: var(--text-muted); margin-left: auto; margin-right: 10px;
+}
+details.settings-card > .settings-card-body {
+  padding: 0 22px 22px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
 .text-muted { color: var(--text-muted); }
 .mono { font-family: var(--font-mono); font-size: 12.5px; }
 
