@@ -111,6 +111,7 @@ model User {
   rejectionReason String?
 
   kvkkAcceptedAt DateTime?
+  partnershipAgreementAcceptedAt DateTime?
 
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

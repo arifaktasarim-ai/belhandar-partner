@@ -43,15 +43,42 @@ const PartnerSalesPage = {
           <button type="submit" class="btn btn-gold" id="sale-submit">Satışı Kaydet</button>
         </form>
       </div>
-      <div class="section-title">Satış Geçmişi</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+        <div class="section-title" style="margin:0">Satış Geçmişi</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="sales-year-filter" style="padding:7px 10px; border:1px solid var(--border-strong); border-radius:6px; font-size:13px;"></select>
+          <select id="sales-month-filter" style="padding:7px 10px; border:1px solid var(--border-strong); border-radius:6px; font-size:13px;">
+            <option value="">Tüm Yıl</option>
+            <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
+            <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
+            <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
+            <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+          </select>
+        </div>
+      </div>
+      <div id="sales-period-summary" style="margin-bottom:16px;"></div>
       <div id="sales-list"></div>
     `;
+
+    this.populateYearFilter(slot);
 
     await this.loadStockOptions(slot);
     await this.loadShippingRates();
     this.bindShippingPreview(slot);
     slot.querySelector('#sale-form').addEventListener('submit', (e) => this.submitSale(e, slot));
-    await this.loadSales(slot.querySelector('#sales-list'));
+
+    const reload = () => this.loadSales(slot);
+    slot.querySelector('#sales-year-filter').addEventListener('change', reload);
+    slot.querySelector('#sales-month-filter').addEventListener('change', reload);
+    await this.loadSales(slot);
+  },
+
+  populateYearFilter(slot) {
+    const select = slot.querySelector('#sales-year-filter');
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= currentYear - 4; y--) years.push(y);
+    select.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
   },
 
   async loadShippingRates() {
@@ -172,7 +199,7 @@ const PartnerSalesPage = {
       Toast.success('Satış kaydedildi.');
       form.reset();
       await this.loadStockOptions(slot);
-      await this.loadSales(slot.querySelector('#sales-list'));
+      await this.loadSales(slot);
     } catch (err) {
       errorBox.textContent = err.message;
       errorBox.style.display = 'block';
@@ -181,12 +208,38 @@ const PartnerSalesPage = {
     }
   },
 
-  async loadSales(wrap) {
+  async loadSales(slot) {
+    const wrap = slot.querySelector('#sales-list');
+    const summaryWrap = slot.querySelector('#sales-period-summary');
     wrap.innerHTML = `<div class="card card-pad" style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto"></div></div>`;
+    summaryWrap.innerHTML = '';
+
+    const year = slot.querySelector('#sales-year-filter').value;
+    const month = slot.querySelector('#sales-month-filter').value;
+    const params = new URLSearchParams();
+    if (year) params.set('year', year);
+    if (month) params.set('month', month);
+
     try {
-      const { data: sales } = await Api.get('/sales/me');
+      const { data: sales } = await Api.get(`/sales/me?${params.toString()}`);
+      const completed = sales.filter((s) => s.status === 'COMPLETED');
+      const totalUnits = completed.reduce((sum, s) => sum + s.items.reduce((u, i) => u + i.quantity, 0), 0);
+      const totalRevenue = completed.reduce((sum, s) => sum + s.totalAmountCents, 0);
+      const totalProfit = completed.reduce((sum, s) => sum + s.totalProfitCents, 0);
+      const periodLabel = month
+        ? `${['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'][month]} ${year}`
+        : `${year} (Tüm Yıl)`;
+
+      summaryWrap.innerHTML = `
+        <div class="stat-grid" style="margin-bottom:0;">
+          <div class="stat-card"><div class="stat-label">${periodLabel} — Satılan Adet</div><div class="stat-value">${totalUnits}</div></div>
+          <div class="stat-card"><div class="stat-label">${periodLabel} — Ciro</div><div class="stat-value">${this.fmtTl(totalRevenue)}</div></div>
+          <div class="stat-card"><div class="stat-label">${periodLabel} — Kazanç</div><div class="stat-value">${this.fmtTl(totalProfit)}</div></div>
+        </div>
+      `;
+
       if (!sales.length) {
-        wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">🧾</div><h3>Henüz satış kaydınız yok</h3></div></div>`;
+        wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">🧾</div><h3>Bu dönemde satış kaydınız yok</h3></div></div>`;
         return;
       }
       wrap.innerHTML = `
@@ -223,7 +276,7 @@ const PartnerSalesPage = {
           try {
             await Api.patch(`/sales/${btn.dataset.void}/void`, { reason });
             Toast.success('Satış iptal edildi, stok ve kazanç geri alındı.');
-            this.loadSales(wrap);
+            this.loadSales(slot);
           } catch (err) {
             Toast.error(err.message);
             btn.disabled = false;

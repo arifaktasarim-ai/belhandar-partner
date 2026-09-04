@@ -103,16 +103,14 @@ export async function buildPaymentsReportCsv(): Promise<string> {
   });
 
   const rows = payments.map((p) => [
-  p.paidAt ? p.paidAt.toISOString().slice(0, 10) : '',
-  `${p.partnerProfile.user.firstName} ${p.partnerProfile.user.lastName}`,
-  centsToTl(p.amountCents).toFixed(2),
-  p.iban,
-  p.status,
-  p.description || '',
-  p.paidBy
-    ? `${p.paidBy.firstName} ${p.paidBy.lastName}`
-    : '',
-]);
+    p.paidAt ? p.paidAt.toISOString().slice(0, 10) : '',
+    `${p.partnerProfile.user.firstName} ${p.partnerProfile.user.lastName}`,
+    centsToTl(p.amountCents).toFixed(2),
+    p.iban,
+    p.status,
+    p.description || '',
+    p.paidBy ? `${p.paidBy.firstName} ${p.paidBy.lastName}` : '',
+  ]);
 
   return toCsv(['Tarih', 'Paydas', 'Tutar (TL)', 'IBAN', 'Durum', 'Aciklama', 'Odemeyi Yapan'], rows);
 }

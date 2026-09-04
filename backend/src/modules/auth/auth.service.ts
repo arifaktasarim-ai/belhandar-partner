@@ -39,6 +39,7 @@ export async function registerPartner(input: RegisterInput, createdByIp?: string
         status: UserStatus.PENDING_APPROVAL,
         avatarUrl: input.avatarUrl,
         kvkkAcceptedAt: new Date(),
+        partnershipAgreementAcceptedAt: new Date(),
         partnerProfile: {
           create: {
             city: input.city,

@@ -166,9 +166,22 @@ export async function createSale(
   return sale.created;
 }
 
-export async function listSales(filter: { partnerProfileId?: string; take?: number }) {
+export async function listSales(filter: { partnerProfileId?: string; take?: number; year?: number; month?: number }) {
+  let saleDateFilter: { gte: Date; lt: Date } | undefined;
+  if (filter.year) {
+    const startMonth = filter.month ? filter.month - 1 : 0;
+    const endMonth = filter.month ? filter.month : 12;
+    saleDateFilter = {
+      gte: new Date(filter.year, startMonth, 1),
+      lt: new Date(filter.year, endMonth, 1),
+    };
+  }
+
   return prisma.sale.findMany({
-    where: { partnerProfileId: filter.partnerProfileId },
+    where: {
+      partnerProfileId: filter.partnerProfileId,
+      saleDate: saleDateFilter,
+    },
     include: {
       items: { include: { variant: { include: { product: true } } } },
       partnerProfile: { include: { user: { select: { firstName: true, lastName: true } } } },

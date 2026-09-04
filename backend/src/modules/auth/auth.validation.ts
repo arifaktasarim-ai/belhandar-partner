@@ -24,6 +24,9 @@ export const registerSchema = z
     kvkkAccepted: z.literal(true, {
       errorMap: () => ({ message: 'KVKK / kullanim sartlarini onaylamalisiniz' }),
     }),
+    partnershipAgreementAccepted: z.literal(true, {
+      errorMap: () => ({ message: 'Paydaslik Sozlesmesi\'ni onaylamalisiniz' }),
+    }),
   })
   .refine((data) => data.password === data.passwordConfirm, {
     message: 'Sifreler eslesmiyor',

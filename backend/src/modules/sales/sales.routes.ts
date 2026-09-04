@@ -25,7 +25,9 @@ router.get(
   requirePartner,
   asyncHandler(async (req: Request, res: Response) => {
     const partnerProfileId = await service.getPartnerProfileIdForUser(req.user!.sub);
-    const sales = await service.listSales({ partnerProfileId });
+    const year = req.query.year ? Number(req.query.year) : undefined;
+    const month = req.query.month ? Number(req.query.month) : undefined;
+    const sales = await service.listSales({ partnerProfileId, year, month });
     res.json({ success: true, data: sales });
   }),
 );
@@ -45,8 +47,14 @@ router.patch(
 router.get(
   '/',
   requireAdmin,
-  asyncHandler(async (_req: Request, res: Response) => {
-    const sales = await service.listSales({ take: 200 });
+  asyncHandler(async (req: Request, res: Response) => {
+    const year = req.query.year ? Number(req.query.year) : undefined;
+    const month = req.query.month ? Number(req.query.month) : undefined;
+    const partnerProfileId = req.query.partnerProfileId as string | undefined;
+    // Yil/ay veya paydas filtresi verilmisse sinir koyma (gecmise erisim tam olsun);
+    // hicbir filtre yoksa varsayilan gorunumde performans icin son 200 kayitla sinirla.
+    const take = year || partnerProfileId ? undefined : 200;
+    const sales = await service.listSales({ take, year, month, partnerProfileId });
     res.json({ success: true, data: sales });
   }),
 );

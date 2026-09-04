@@ -1,6 +1,6 @@
 const AdminSalesPage = {
   partners: [],
-  state: { partnerId: '', status: '', search: '' },
+  state: { partnerId: '', status: '', search: '', year: '', month: '' },
 
   async render(container) {
     const slot = Layout.renderShell(container, { title: 'Paydaş Satışları' });
@@ -22,15 +22,33 @@ const AdminSalesPage = {
             <option value="VOID">İptal</option>
           </select>
         </div>
+        <div class="field" style="margin:0; min-width:120px;">
+          <label>Yıl</label>
+          <select id="s-year"></select>
+        </div>
+        <div class="field" style="margin:0; min-width:140px;">
+          <label>Ay</label>
+          <select id="s-month">
+            <option value="">Tüm Yıl</option>
+            <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
+            <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
+            <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
+            <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+          </select>
+        </div>
       </div>
+      <div id="sales-period-summary" style="margin-bottom:16px;"></div>
       <div id="sales-feed"></div>
     `;
 
+    this.populateYearFilter(slot);
     await this.loadPartnerOptions(slot);
 
-    const reload = () => this.load(slot.querySelector('#sales-feed'));
+    const reload = () => this.load(slot);
     slot.querySelector('#s-partner').addEventListener('change', (e) => { this.state.partnerId = e.target.value; reload(); });
     slot.querySelector('#s-status').addEventListener('change', (e) => { this.state.status = e.target.value; reload(); });
+    slot.querySelector('#s-year').addEventListener('change', (e) => { this.state.year = e.target.value; reload(); });
+    slot.querySelector('#s-month').addEventListener('change', (e) => { this.state.month = e.target.value; reload(); });
     let debounceTimer;
     slot.querySelector('#s-search').addEventListener('input', (e) => {
       clearTimeout(debounceTimer);
@@ -38,6 +56,15 @@ const AdminSalesPage = {
     });
 
     await reload();
+  },
+
+  populateYearFilter(slot) {
+    const select = slot.querySelector('#s-year');
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= currentYear - 4; y--) years.push(y);
+    select.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+    this.state.year = String(currentYear);
   },
 
   fmtTl(cents) {
@@ -56,12 +83,19 @@ const AdminSalesPage = {
     } catch (_e) { /* sessiz gec */ }
   },
 
-  async load(wrap) {
+  async load(slot) {
+    const wrap = slot.querySelector('#sales-feed');
+    const summaryWrap = slot.querySelector('#sales-period-summary');
     wrap.innerHTML = `<div class="card card-pad" style="text-align:center; padding:40px;"><div class="spinner" style="margin:0 auto"></div></div>`;
+
+    const params = new URLSearchParams();
+    if (this.state.year) params.set('year', this.state.year);
+    if (this.state.month) params.set('month', this.state.month);
+    if (this.state.partnerId) params.set('partnerProfileId', this.state.partnerId);
+
     try {
-      const { data: sales } = await Api.get('/sales');
+      const { data: sales } = await Api.get(`/sales?${params.toString()}`);
       let filtered = sales;
-      if (this.state.partnerId) filtered = filtered.filter((s) => s.partnerProfileId === this.state.partnerId);
       if (this.state.status) filtered = filtered.filter((s) => s.status === this.state.status);
       if (this.state.search) {
         filtered = filtered.filter((s) =>
@@ -70,8 +104,24 @@ const AdminSalesPage = {
         );
       }
 
+      const completed = filtered.filter((s) => s.status === 'COMPLETED');
+      const totalUnits = completed.reduce((sum, s) => sum + s.items.reduce((u, i) => u + i.quantity, 0), 0);
+      const totalRevenue = completed.reduce((sum, s) => sum + s.totalAmountCents, 0);
+      const totalProfit = completed.reduce((sum, s) => sum + s.totalProfitCents, 0);
+      const periodLabel = this.state.month
+        ? `${['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'][this.state.month]} ${this.state.year}`
+        : `${this.state.year} (Tüm Yıl)`;
+
+      summaryWrap.innerHTML = `
+        <div class="stat-grid" style="margin-bottom:0;">
+          <div class="stat-card"><div class="stat-label">${periodLabel} — Satılan Adet</div><div class="stat-value">${totalUnits}</div></div>
+          <div class="stat-card"><div class="stat-label">${periodLabel} — Toplam Ciro</div><div class="stat-value">${this.fmtTl(totalRevenue)}</div></div>
+          <div class="stat-card"><div class="stat-label">${periodLabel} — Toplam Kazanç</div><div class="stat-value">${this.fmtTl(totalProfit)}</div></div>
+        </div>
+      `;
+
       if (!filtered.length) {
-        wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">🧾</div><h3>Satış bulunamadı</h3><p>Filtreleri değiştirip tekrar deneyin.</p></div></div>`;
+        wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">🧾</div><h3>Bu dönemde satış bulunamadı</h3><p>Filtreleri değiştirip tekrar deneyin.</p></div></div>`;
         return;
       }
 
