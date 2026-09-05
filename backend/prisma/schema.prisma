@@ -124,6 +124,8 @@ model User {
   notifications    Notification[]
   paymentsMadeBy   Payment[]            @relation("PaymentActor")
   pushSubscriptions PushSubscription[]
+  returnsRequested  Return[]            @relation("ReturnRequestedBy")
+  returnsReviewed   Return[]            @relation("ReturnReviewedBy")
 
   @@index([role])
   @@index([status])
@@ -184,6 +186,7 @@ model PartnerProfile {
   orders    Order[]
   earnings  Earning[]
   payments  Payment[]
+  returns   Return[]
 
   @@map("partner_profiles")
 }
@@ -357,6 +360,7 @@ model Sale {
 
   items            SaleItem[]
   earning          Earning?
+  returns          Return[]
 
   @@index([partnerProfileId])
   @@index([saleDate])
@@ -373,6 +377,8 @@ model SaleItem {
   quantity      Int
   unitPriceCents  Int // o anki satis fiyati (snapshot)
   unitProfitCents Int // o anki birim kazanc (snapshot)
+
+  returns       Return[]
 
   @@map("sale_items")
 }
@@ -547,6 +553,42 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+enum ReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Return {
+  id               String         @id @default(uuid())
+
+  saleId           String
+  sale             Sale           @relation(fields: [saleId], references: [id])
+  saleItemId       String
+  saleItem         SaleItem       @relation(fields: [saleItemId], references: [id])
+
+  partnerProfileId String
+  partnerProfile   PartnerProfile @relation(fields: [partnerProfileId], references: [id])
+
+  quantity         Int
+  reason           String
+  status           ReturnStatus   @default(PENDING)
+  refundAmountCents Int           // musteriye iade edilmesi gereken tahmini tutar (bilgi amacli)
+
+  requestedByUserId String
+  requestedBy        User         @relation("ReturnRequestedBy", fields: [requestedByUserId], references: [id])
+  reviewedByUserId   String?
+  reviewedBy          User?       @relation("ReturnReviewedBy", fields: [reviewedByUserId], references: [id])
+  reviewNote          String?
+
+  createdAt        DateTime       @default(now())
+  reviewedAt        DateTime?
+
+  @@index([partnerProfileId])
+  @@index([saleId])
+  @@map("returns")
 }
 
 model Settings {

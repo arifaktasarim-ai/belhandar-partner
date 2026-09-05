@@ -33,6 +33,16 @@ router.get(
   }),
 );
 
+router.patch(
+  '/:id/cancel',
+  requirePartner,
+  asyncHandler(async (req: Request, res: Response) => {
+    const partnerProfileId = await service.getPartnerProfileIdForUser(req.user!.sub);
+    const order = await service.cancelOwnOrder(req.params.id, partnerProfileId, req.user!.sub);
+    res.json({ success: true, data: order });
+  }),
+);
+
 // --- Admin ---
 router.get(
   '/',

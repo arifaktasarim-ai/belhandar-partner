@@ -68,7 +68,7 @@ const PartnerOrdersPage = {
       wrap.innerHTML = `
         <div class="card table-wrap">
           <table>
-            <thead><tr><th>Sipariş No</th><th>Tarih</th><th>Ürünler</th><th>Tutar</th><th>Durum</th></tr></thead>
+            <thead><tr><th>Sipariş No</th><th>Tarih</th><th>Ürünler</th><th>Tutar</th><th>Durum</th><th></th></tr></thead>
             <tbody>
               ${orders.map((o) => {
                 const [cls, label] = this.statusMeta(o.status);
@@ -79,6 +79,7 @@ const PartnerOrdersPage = {
                     <td>${o.items.map((i) => `${i.variant.product.name} (${i.variant.volumeMl}ml) x${i.quantity}${i.testerQuantity > 0 ? ` <span class="text-muted">(+${i.testerQuantity} tester)</span>` : ''}`).join(', ')}</td>
                     <td>${this.fmtTl(o.totalAmountCents)}</td>
                     <td><span class="badge ${cls}">${label}</span></td>
+                    <td>${o.status === 'PENDING_APPROVAL' ? `<button class="btn btn-outline" data-cancel="${o.id}" style="padding:5px 10px; min-height:auto; font-size:12px;">İptal Et</button>` : ''}</td>
                   </tr>
                 `;
               }).join('')}
@@ -96,11 +97,26 @@ const PartnerOrdersPage = {
                 </div>
                 <div class="text-muted" style="font-size:12.5px; margin:6px 0;">${o.items.map((i) => `${i.variant.product.name} x${i.quantity}${i.testerQuantity > 0 ? ` (+${i.testerQuantity} tester)` : ''}`).join(', ')}</div>
                 <div class="record-card-row"><span class="label">Tutar</span><span>${this.fmtTl(o.totalAmountCents)}</span></div>
+                ${o.status === 'PENDING_APPROVAL' ? `<button class="btn btn-outline btn-block" data-cancel="${o.id}" style="margin-top:8px;">İptal Et</button>` : ''}
               </div>
             `;
           }).join('')}
         </div>
       `;
+      wrap.querySelectorAll('[data-cancel]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Bu siparişi iptal etmek istediğinize emin misiniz?')) return;
+          btn.disabled = true;
+          try {
+            await Api.patch(`/orders/${btn.dataset.cancel}/cancel`);
+            Toast.success('Sipariş iptal edildi.');
+            this.loadOrders(wrap);
+          } catch (err) {
+            Toast.error(err.message);
+            btn.disabled = false;
+          }
+        });
+      });
     } catch (err) {
       wrap.innerHTML = `<div class="card card-pad"><p class="field-error">${err.message}</p></div>`;
     }

@@ -16,6 +16,7 @@ const Layout = (() => {
     reports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c.14.44.75.99 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"/></svg>',
     logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>',
+    returns: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>',
   };
 
   const PARTNER_NAV = [
@@ -23,6 +24,7 @@ const Layout = (() => {
     { path: '/partner/sales', label: 'Satis', icon: 'sale' },
     { path: '/partner/stocks', label: 'Stok', icon: 'stock' },
     { path: '/partner/orders', label: 'Siparis', icon: 'order' },
+    { path: '/partner/returns', label: 'Iadeler', icon: 'returns' },
     { path: '/partner/profile', label: 'Profil', icon: 'profile' },
   ];
 
@@ -34,6 +36,7 @@ const Layout = (() => {
     { path: '/admin/production', label: 'Uretim', icon: 'production' },
     { path: '/admin/stocks', label: 'Stok', icon: 'stock' },
     { path: '/admin/sales', label: 'Paydas Satislari', icon: 'sale' },
+    { path: '/admin/returns', label: 'Iadeler', icon: 'returns' },
     { path: '/admin/customers', label: 'Musteriler', icon: 'partners' },
     { path: '/admin/payments', label: 'Odemeler', icon: 'payments' },
     { path: '/admin/reports', label: 'Raporlar', icon: 'reports' },
@@ -47,6 +50,7 @@ const Layout = (() => {
     ADMIN_NAV.find((n) => n.path === '/admin/partners'),
     ADMIN_NAV.find((n) => n.path === '/admin/orders'),
     ADMIN_NAV.find((n) => n.path === '/admin/sales'),
+    ADMIN_NAV.find((n) => n.path === '/admin/returns'),
     ADMIN_NAV.find((n) => n.path === '/admin/settings'),
   ];
 
@@ -222,6 +226,7 @@ const Layout = (() => {
         '/admin/partners': data.pendingPartners,
         '/admin/orders': data.pendingOrders,
         '/admin/payments': data.pendingPayments,
+        '/admin/returns': data.pendingReturns,
       };
       Object.entries(badgeMap).forEach(([path, count]) => {
         container.querySelectorAll(`[data-nav-badge="${path}"]`).forEach((el) => {

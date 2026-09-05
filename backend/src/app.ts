@@ -27,6 +27,7 @@ import customersRoutes from './modules/customers/customers.routes';
 import pushRoutes from './modules/push/push.routes';
 import shippingRatesRoutes from './modules/shipping-rates/shipping-rates.routes';
 import adminStaffRoutes from './modules/admin-staff/admin-staff.routes';
+import returnsRoutes from './modules/returns/returns.routes';
 
 const app = express();
 
@@ -81,6 +82,7 @@ app.use('/api/admin/customers', customersRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/shipping-rates', shippingRatesRoutes);
 app.use('/api/admin/staff', adminStaffRoutes);
+app.use('/api/returns', returnsRoutes);
 
 // --- Hata yonetimi ---
 app.use(notFoundHandler);

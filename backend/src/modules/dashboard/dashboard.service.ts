@@ -72,12 +72,13 @@ export async function getPartnerDashboard(partnerProfileId: string) {
 }
 
 export async function getAdminBadgeCounts() {
-  const [pendingPartners, pendingOrders, pendingPayments] = await Promise.all([
+  const [pendingPartners, pendingOrders, pendingPayments, pendingReturns] = await Promise.all([
     prisma.user.count({ where: { role: 'PARTNER', status: 'PENDING_APPROVAL' } }),
     prisma.order.count({ where: { status: 'PENDING_APPROVAL' } }),
     prisma.payment.count({ where: { status: 'PENDING' } }),
+    prisma.return.count({ where: { status: 'PENDING' } }),
   ]);
-  return { pendingPartners, pendingOrders, pendingPayments };
+  return { pendingPartners, pendingOrders, pendingPayments, pendingReturns };
 }
 
 export async function getAdminDashboard() {

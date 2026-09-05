@@ -128,6 +128,33 @@ export async function getOrderDetail(orderId: string, partnerProfileId?: string)
   return order;
 }
 
+export async function cancelOwnOrder(orderId: string, partnerProfileId: string, actorUserId: string) {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) throw ApiError.notFound('Siparis bulunamadi.');
+  if (order.partnerProfileId !== partnerProfileId) {
+    throw ApiError.forbidden('Bu siparise erisim yetkiniz yok.');
+  }
+  if (order.status !== OrderStatus.PENDING_APPROVAL) {
+    throw ApiError.badRequest('Sadece henuz onaylanmamis siparisler kendiniz tarafindan iptal edilebilir.');
+  }
+
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await tx.order.update({ where: { id: orderId }, data: { status: OrderStatus.CANCELLED } });
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        fromStatus: OrderStatus.PENDING_APPROVAL,
+        toStatus: OrderStatus.CANCELLED,
+        actorUserId,
+        note: 'Paydas tarafindan iptal edildi',
+      },
+    });
+    return result;
+  });
+
+  return updated;
+}
+
 export async function changeOrderStatus(
   orderId: string,
   newStatus: OrderStatus,
@@ -175,6 +202,28 @@ export async function changeOrderStatus(
             type: 'ORDER_RECEIVED',
             quantityChange: item.quantity,
             reason: `Siparis teslim edildi (${order.orderNumber})`,
+            relatedOrderId: order.id,
+            actorUserId,
+          },
+        });
+      }
+    }
+
+    // Daha once TESLIM EDILMIS bir siparis iptal edilirse, eklenen stok geri alinir
+    if (newStatus === OrderStatus.CANCELLED && wasAlreadyDelivered) {
+      for (const item of order.items) {
+        await tx.partnerStock.upsert({
+          where: { partnerProfileId_variantId: { partnerProfileId: order.partnerProfileId, variantId: item.variantId } },
+          update: { quantity: { decrement: item.quantity } },
+          create: { partnerProfileId: order.partnerProfileId, variantId: item.variantId, quantity: 0 },
+        });
+        await tx.stockMovement.create({
+          data: {
+            partnerProfileId: order.partnerProfileId,
+            variantId: item.variantId,
+            type: 'CANCELLED_REVERT',
+            quantityChange: -item.quantity,
+            reason: `Teslim edilmis siparis iptal edildi (${order.orderNumber})`,
             relatedOrderId: order.id,
             actorUserId,
           },

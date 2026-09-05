@@ -33,6 +33,10 @@
     requiresAuth: true, roles: ['PARTNER'],
     render: (c) => PartnerOrdersPage.render(c),
   });
+  Router.register('/partner/returns', {
+    requiresAuth: true, roles: ['PARTNER'],
+    render: (c) => PartnerReturnsPage.render(c),
+  });
   Router.register('/partner/profile', {
     requiresAuth: true, roles: ['PARTNER'],
     render: (c) => PartnerProfilePage.render(c),
@@ -66,6 +70,10 @@
   Router.register('/admin/sales', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
     render: (c) => AdminSalesPage.render(c),
+  });
+  Router.register('/admin/returns', {
+    requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
+    render: (c) => AdminReturnsPage.render(c),
   });
   Router.register('/admin/customers', {
     requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'],
