@@ -10,3 +10,8 @@ export const createReturnSchema = z.object({
 export const rejectReturnSchema = z.object({
   reviewNote: z.string().optional(),
 });
+
+export const completeRefundSchema = z.object({
+  refundIban: z.string().min(10).optional(),
+  refundNote: z.string().optional(),
+});

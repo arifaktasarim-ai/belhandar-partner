@@ -4,7 +4,7 @@ import { requireAdmin, requirePartner } from '../../middleware/role.middleware';
 import { validateBody } from '../../middleware/validate.middleware';
 import { asyncHandler } from '../../utils/asyncHandler';
 import * as service from './returns.service';
-import { createReturnSchema, rejectReturnSchema } from './returns.validation';
+import { createReturnSchema, rejectReturnSchema, completeRefundSchema } from './returns.validation';
 
 const router = Router();
 router.use(requireAuth);
@@ -46,6 +46,16 @@ router.patch(
   requireAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     const ret = await service.approveReturn(req.params.id, req.user!.sub);
+    res.json({ success: true, data: ret });
+  }),
+);
+
+router.patch(
+  '/:id/complete-refund',
+  requireAdmin,
+  validateBody(completeRefundSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const ret = await service.completeRefund(req.params.id, req.user!.sub, req.body);
     res.json({ success: true, data: ret });
   }),
 );

@@ -226,7 +226,7 @@ const Layout = (() => {
         '/admin/partners': data.pendingPartners,
         '/admin/orders': data.pendingOrders,
         '/admin/payments': data.pendingPayments,
-        '/admin/returns': data.pendingReturns,
+        '/admin/returns': data.pendingReturns + (data.pendingRefunds || 0),
       };
       Object.entries(badgeMap).forEach(([path, count]) => {
         container.querySelectorAll(`[data-nav-badge="${path}"]`).forEach((el) => {

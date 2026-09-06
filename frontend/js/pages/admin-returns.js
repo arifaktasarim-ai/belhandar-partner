@@ -12,6 +12,7 @@ const AdminReturnsPage = {
             <option value="PENDING" selected>Onay Bekliyor</option>
             <option value="APPROVED">Onaylandı</option>
             <option value="REJECTED">Reddedildi</option>
+            <option value="REFUND_PENDING">Para İadesi Bekleyenler</option>
           </select>
         </div>
       </div>
@@ -41,15 +42,29 @@ const AdminReturnsPage = {
     return `<span class="badge ${cls}">${label}</span>`;
   },
 
+  refundBadge(refundStatus) {
+    const map = {
+      NOT_REQUIRED: ['badge-neutral', '—'],
+      PENDING: ['badge-gold', 'Para İadesi Bekliyor'],
+      COMPLETED: ['badge-sage', 'Para İadesi Yapıldı'],
+    };
+    const [cls, label] = map[refundStatus] || ['badge-neutral', refundStatus];
+    return `<span class="badge ${cls}">${label}</span>`;
+  },
+
   async load(wrap) {
     wrap.innerHTML = `<div class="card card-pad" style="text-align:center; padding:40px;"><div class="spinner" style="margin:0 auto"></div></div>`;
+    const isRefundFilter = this.state.status === 'REFUND_PENDING';
     const params = new URLSearchParams();
-    if (this.state.status) params.set('status', this.state.status);
+    if (this.state.status && !isRefundFilter) params.set('status', this.state.status);
+    if (isRefundFilter) params.set('status', 'APPROVED');
 
     try {
-      const { data: returns } = await Api.get(`/returns?${params.toString()}`);
+      const { data: allReturns } = await Api.get(`/returns?${params.toString()}`);
+      const returns = isRefundFilter ? allReturns.filter((r) => r.refundStatus === 'PENDING') : allReturns;
+
       if (!returns.length) {
-        wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">↩️</div><h3>İade talebi bulunamadı</h3></div></div>`;
+        wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">↩️</div><h3>${isRefundFilter ? 'Bekleyen para iadesi yok' : 'İade talebi bulunamadı'}</h3></div></div>`;
         return;
       }
       wrap.innerHTML = returns.map((r) => this.cardHtml(r)).join('');
@@ -84,7 +99,19 @@ const AdminReturnsPage = {
             <button class="btn btn-gold" data-approve="${r.id}" style="padding:7px 14px; min-height:auto;">Onayla (Stok + Kazanç Güncelle)</button>
             <button class="btn btn-danger" data-reject="${r.id}" style="padding:7px 14px; min-height:auto;">Reddet</button>
           </div>
-        ` : r.reviewNote ? `<div class="text-muted" style="font-size:11.5px; margin-top:8px; font-style:italic;">Not: ${r.reviewNote}</div>` : ''}
+        ` : ''}
+        ${r.status === 'APPROVED' ? `
+          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="font-size:12.5px;">
+              ${this.refundBadge(r.refundStatus)}
+              ${r.refundStatus === 'COMPLETED' ? `<span class="text-muted"> · ${new Date(r.refundedAt).toLocaleDateString('tr-TR')}${r.refundedBy ? ` · ${r.refundedBy.firstName} ${r.refundedBy.lastName}` : ''}</span>` : ''}
+              ${r.refundIban ? `<div class="mono text-muted" style="font-size:11px; margin-top:3px;">IBAN: ${r.refundIban}</div>` : ''}
+              ${r.refundNote ? `<div class="text-muted" style="font-size:11px; font-style:italic;">${r.refundNote}</div>` : ''}
+            </div>
+            ${r.refundStatus === 'PENDING' ? `<button class="btn btn-gold" data-complete-refund="${r.id}" data-iban="${r.refundIban || ''}" style="padding:7px 14px; min-height:auto;">Para İadesi Yapıldı Olarak İşaretle</button>` : ''}
+          </div>
+        ` : ''}
+        ${r.status === 'REJECTED' && r.reviewNote ? `<div class="text-muted" style="font-size:11.5px; margin-top:8px; font-style:italic;">Not: ${r.reviewNote}</div>` : ''}
       </div>
     `;
   },
@@ -111,6 +138,23 @@ const AdminReturnsPage = {
         try {
           await Api.patch(`/returns/${btn.dataset.reject}/reject`, { reviewNote });
           Toast.success('İade talebi reddedildi.');
+          this.load(wrap);
+        } catch (err) {
+          Toast.error(err.message);
+          btn.disabled = false;
+        }
+      });
+    });
+    wrap.querySelectorAll('[data-complete-refund]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const defaultIban = btn.dataset.iban || '';
+        const refundIban = prompt('Para gönderilen IBAN (değiştirmek isterseniz düzenleyin):', defaultIban);
+        if (refundIban === null) return;
+        const refundNote = prompt('Not (opsiyonel, örn. "Müşteriye elden iade edildi"):') || undefined;
+        btn.disabled = true;
+        try {
+          await Api.patch(`/returns/${btn.dataset.completeRefund}/complete-refund`, { refundIban: refundIban || undefined, refundNote });
+          Toast.success('Para iadesi tamamlandı olarak işaretlendi.');
           this.load(wrap);
         } catch (err) {
           Toast.error(err.message);

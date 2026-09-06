@@ -107,7 +107,13 @@ export async function approveReturn(returnId: string, actorUserId: string) {
   const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const result = await tx.return.update({
       where: { id: returnId },
-      data: { status: 'APPROVED', reviewedByUserId: actorUserId, reviewedAt: new Date() },
+      data: {
+        status: 'APPROVED',
+        reviewedByUserId: actorUserId,
+        reviewedAt: new Date(),
+        refundStatus: 'PENDING',
+        refundIban: ret.partnerProfile.iban,
+      },
     });
 
     // Stok geri eklenir (urun saglam kabul edilip yeniden satisa hazir varsayilir)
@@ -155,6 +161,50 @@ export async function approveReturn(returnId: string, actorUserId: string) {
   await sendPushToUser(ret.partnerProfile.userId, {
     title: 'İade talebiniz onaylandı',
     body: `${ret.quantity} adet ürün iadesi onaylandı, stoğunuza eklendi.`,
+    url: '/#/partner/returns',
+  });
+
+  return updated;
+}
+
+export async function completeRefund(
+  returnId: string,
+  actorUserId: string,
+  input: { refundIban?: string; refundNote?: string },
+) {
+  const ret = await prisma.return.findUnique({ where: { id: returnId }, include: { partnerProfile: true } });
+  if (!ret) throw ApiError.notFound('Iade talebi bulunamadi.');
+  if (ret.status !== 'APPROVED') throw ApiError.badRequest('Sadece onaylanmis iadeler icin para iadesi isaretlenebilir.');
+  if (ret.refundStatus === 'COMPLETED') throw ApiError.badRequest('Bu iade icin para iadesi zaten tamamlanmis.');
+
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await tx.return.update({
+      where: { id: returnId },
+      data: {
+        refundStatus: 'COMPLETED',
+        refundedAt: new Date(),
+        refundedByUserId: actorUserId,
+        refundIban: input.refundIban || ret.refundIban,
+        refundNote: input.refundNote,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'RETURN_REFUND_COMPLETED',
+        entityType: 'Return',
+        entityId: returnId,
+        afterData: { refundAmountCents: ret.refundAmountCents, refundIban: input.refundIban || ret.refundIban },
+      },
+    });
+
+    return result;
+  });
+
+  await sendPushToUser(ret.partnerProfile.userId, {
+    title: 'Para iadesi tamamlandı',
+    body: `${(ret.refundAmountCents / 100).toLocaleString('tr-TR')} TL tutarındaki iade ödemesi gerçekleşti.`,
     url: '/#/partner/returns',
   });
 

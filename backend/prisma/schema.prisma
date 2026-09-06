@@ -126,6 +126,7 @@ model User {
   pushSubscriptions PushSubscription[]
   returnsRequested  Return[]            @relation("ReturnRequestedBy")
   returnsReviewed   Return[]            @relation("ReturnReviewedBy")
+  returnsRefunded   Return[]            @relation("ReturnRefundedBy")
 
   @@index([role])
   @@index([status])
@@ -561,6 +562,12 @@ enum ReturnStatus {
   REJECTED
 }
 
+enum RefundStatus {
+  NOT_REQUIRED
+  PENDING
+  COMPLETED
+}
+
 model Return {
   id               String         @id @default(uuid())
 
@@ -575,13 +582,22 @@ model Return {
   quantity         Int
   reason           String
   status           ReturnStatus   @default(PENDING)
-  refundAmountCents Int           // musteriye iade edilmesi gereken tahmini tutar (bilgi amacli)
+  refundAmountCents Int           // musteriye iade edilmesi gereken tahmini tutar
 
   requestedByUserId String
   requestedBy        User         @relation("ReturnRequestedBy", fields: [requestedByUserId], references: [id])
   reviewedByUserId   String?
   reviewedBy          User?       @relation("ReturnReviewedBy", fields: [reviewedByUserId], references: [id])
   reviewNote          String?
+
+  // Para iadesi takibi: iade ONAYLANDIGINDA otomatik PENDING olur, admin gercekten
+  // parayi gonderdikten sonra elle COMPLETED yapar.
+  refundStatus     RefundStatus   @default(NOT_REQUIRED)
+  refundIban       String?
+  refundNote       String?
+  refundedAt       DateTime?
+  refundedByUserId String?
+  refundedBy       User?          @relation("ReturnRefundedBy", fields: [refundedByUserId], references: [id])
 
   createdAt        DateTime       @default(now())
   reviewedAt        DateTime?

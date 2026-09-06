@@ -137,6 +137,16 @@ const PartnerReturnsPage = {
     return `<span class="badge ${cls}">${label}</span>`;
   },
 
+  refundBadge(refundStatus) {
+    const map = {
+      NOT_REQUIRED: ['badge-neutral', '—'],
+      PENDING: ['badge-gold', 'Para İadesi Bekliyor'],
+      COMPLETED: ['badge-sage', 'Para İadesi Yapıldı'],
+    };
+    const [cls, label] = map[refundStatus] || ['badge-neutral', refundStatus];
+    return `<span class="badge ${cls}">${label}</span>`;
+  },
+
   async loadReturns(wrap) {
     wrap.innerHTML = `<div class="card card-pad" style="text-align:center; padding:24px;"><div class="spinner" style="margin:0 auto"></div></div>`;
     try {
@@ -148,7 +158,7 @@ const PartnerReturnsPage = {
       wrap.innerHTML = `
         <div class="card table-wrap">
           <table>
-            <thead><tr><th>Tarih</th><th>Ürün</th><th>Adet</th><th>Tutar</th><th>Gerekçe</th><th>Durum</th></tr></thead>
+            <thead><tr><th>Tarih</th><th>Ürün</th><th>Adet</th><th>Tutar</th><th>Gerekçe</th><th>Durum</th><th>Para İadesi</th></tr></thead>
             <tbody>
               ${returns.map((r) => `
                 <tr>
@@ -158,6 +168,7 @@ const PartnerReturnsPage = {
                   <td>${this.fmtTl(r.refundAmountCents)}</td>
                   <td class="text-muted" style="font-size:12.5px; max-width:200px;">${r.reason}${r.reviewNote ? `<div style="font-style:italic;">Not: ${r.reviewNote}</div>` : ''}</td>
                   <td>${this.statusBadge(r.status)}</td>
+                  <td>${this.refundBadge(r.refundStatus)}</td>
                 </tr>
               `).join('')}
             </tbody>
