@@ -1,4 +1,6 @@
 const PartnerDashboardPage = {
+  chartPeriod: 7,
+
   async render(container) {
     const user = Auth.getUser();
     const slot = Layout.renderShell(container, { title: 'Ana Sayfa' });
@@ -9,6 +11,7 @@ const PartnerDashboardPage = {
         Api.get('/dashboard/partner'),
         Api.get('/earnings/me/summary'),
       ]);
+      this.stats = stats;
       this.renderContent(slot, user, stats, earnings);
     } catch (err) {
       slot.innerHTML = `<div class="card card-pad"><p class="field-error">${err.message}</p></div>`;
@@ -20,7 +23,6 @@ const PartnerDashboardPage = {
   },
 
   renderContent(slot, user, stats, earnings) {
-    const maxUnits = Math.max(1, ...stats.last7Days.map((d) => d.units));
     const changeLabel = earnings.changePct === null ? '' : `
       <div class="stat-sub ${earnings.changePct >= 0 ? 'positive' : 'negative'}">
         ${earnings.changePct >= 0 ? '+' : ''}${earnings.changePct}% gecen aya gore
@@ -40,14 +42,24 @@ const PartnerDashboardPage = {
       </div>
 
       <div class="card card-pad" style="margin-bottom:20px;">
-        <div class="section-title">Son 7 Gun Satis</div>
-        <div style="display:flex; align-items:flex-end; gap:10px; height:120px; padding-top:10px;">
-          ${stats.last7Days.map((d) => `
-            <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
-              <div style="width:100%; max-width:36px; height:${Math.max(4, (d.units / maxUnits) * 90)}px; background:linear-gradient(180deg, var(--gold-light), var(--gold)); border-radius:4px 4px 0 0;"></div>
-              <span class="text-muted" style="font-size:10.5px;">${new Date(d.date).toLocaleDateString('tr-TR', { weekday: 'short' })}</span>
-            </div>
-          `).join('')}
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div class="section-title" style="margin:0">Satış Geçmişi</div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn ${this.chartPeriod === 7 ? 'btn-gold' : 'btn-outline'}" data-period="7" style="padding:6px 14px; min-height:auto; font-size:12.5px;">Son 7 Gün</button>
+            <button class="btn ${this.chartPeriod === 30 ? 'btn-gold' : 'btn-outline'}" data-period="30" style="padding:6px 14px; min-height:auto; font-size:12.5px;">Son 30 Gün</button>
+          </div>
+        </div>
+
+        <div id="sales-chart"></div>
+        <div id="sales-day-table" style="margin-top:16px;"></div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="text-muted" style="font-size:12.5px;">
+            Bu yıl toplam: <strong>${stats.yearToDate.salesCount}</strong> satış ·
+            <strong>${this.fmtTl(stats.yearToDate.revenueCents)}</strong> ciro ·
+            <strong style="color:var(--sage);">${this.fmtTl(stats.yearToDate.profitCents)}</strong> kazanç
+          </div>
+          <a href="#/partner/sales" class="btn btn-outline" style="padding:8px 16px; min-height:auto; font-size:12.5px;">Tüm Satış Geçmişini Görüntüle →</a>
         </div>
       </div>
 
@@ -76,6 +88,15 @@ const PartnerDashboardPage = {
       <div id="payment-history"></div>
     `;
 
+    slot.querySelectorAll('[data-period]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.chartPeriod = Number(btn.dataset.period);
+        this.renderContent(slot, user, stats, earnings);
+      });
+    });
+
+    this.renderChart(slot, stats);
+
     const requestBtn = slot.querySelector('#btn-request-payment');
     const requestForm = slot.querySelector('#request-payment-form');
     requestBtn.addEventListener('click', () => {
@@ -102,6 +123,7 @@ const PartnerDashboardPage = {
           Api.get('/dashboard/partner'),
           Api.get('/earnings/me/summary'),
         ]);
+        this.stats = freshStats;
         this.renderContent(slot, user, freshStats, freshEarnings);
       } catch (err) {
         errorBox.textContent = err.message;
@@ -111,6 +133,63 @@ const PartnerDashboardPage = {
     });
 
     this.loadPaymentHistory(slot.querySelector('#payment-history'));
+  },
+
+  renderChart(slot, stats) {
+    const days = this.chartPeriod === 7 ? stats.last7Days : stats.last30Days;
+    const maxUnits = Math.max(1, ...days.map((d) => d.units));
+    const chartWrap = slot.querySelector('#sales-chart');
+    const isNarrow = this.chartPeriod === 30;
+
+    chartWrap.innerHTML = `
+      <div style="display:flex; align-items:flex-end; gap:${isNarrow ? '3px' : '10px'}; height:120px; padding-top:10px; overflow-x:auto;">
+        ${days.map((d) => `
+          <div style="flex:1; min-width:${isNarrow ? '8px' : '28px'}; display:flex; flex-direction:column; align-items:center; gap:6px;" title="${new Date(d.date).toLocaleDateString('tr-TR')}: ${d.units} adet, ${this.fmtTl(d.revenueCents)}">
+            <div style="width:100%; max-width:${isNarrow ? '10px' : '36px'}; height:${Math.max(3, (d.units / maxUnits) * 90)}px; background:linear-gradient(180deg, var(--gold-light), var(--gold)); border-radius:3px 3px 0 0;"></div>
+            ${!isNarrow ? `<span class="text-muted" style="font-size:10.5px;">${new Date(d.date).toLocaleDateString('tr-TR', { weekday: 'short' })}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    const tableWrap = slot.querySelector('#sales-day-table');
+    const totalUnits = days.reduce((s, d) => s + d.units, 0);
+    const totalRevenue = days.reduce((s, d) => s + d.revenueCents, 0);
+    const totalProfit = days.reduce((s, d) => s + d.profitCents, 0);
+
+    // 30 gunluk gorunumde sadece satis olan gunleri listele (bos tablo satirini onlemek icin), 7 gunlukte hepsini goster
+    const rows = this.chartPeriod === 7 ? days : days.filter((d) => d.units > 0);
+
+    tableWrap.innerHTML = `
+      <details ${this.chartPeriod === 7 ? 'open' : ''}>
+        <summary style="cursor:pointer; font-size:12.5px; color:var(--gold-dim); font-weight:600; list-style:none; margin-bottom:8px;">
+          Gün gün detay (${rows.length} gün) ${this.CHEVRON || ''}
+        </summary>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tarih</th><th>Adet</th><th>Ciro</th><th>Kâr</th></tr></thead>
+            <tbody>
+              ${rows.length ? rows.map((d) => `
+                <tr>
+                  <td class="mono">${new Date(d.date).toLocaleDateString('tr-TR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</td>
+                  <td>${d.units}</td>
+                  <td>${this.fmtTl(d.revenueCents)}</td>
+                  <td style="color:var(--sage);">${this.fmtTl(d.profitCents)}</td>
+                </tr>
+              `).join('') : `<tr><td colspan="4" class="text-muted" style="text-align:center; padding:16px;">Bu dönemde satış yok</td></tr>`}
+            </tbody>
+            <tfoot>
+              <tr style="font-weight:700; border-top:2px solid var(--border-strong);">
+                <td>Toplam</td>
+                <td>${totalUnits}</td>
+                <td>${this.fmtTl(totalRevenue)}</td>
+                <td style="color:var(--sage);">${this.fmtTl(totalProfit)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </details>
+    `;
   },
 
   statusBadge(status) {

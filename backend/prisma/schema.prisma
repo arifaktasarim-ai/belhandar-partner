@@ -590,8 +590,6 @@ model Return {
   reviewedBy          User?       @relation("ReturnReviewedBy", fields: [reviewedByUserId], references: [id])
   reviewNote          String?
 
-  // Para iadesi takibi: iade ONAYLANDIGINDA otomatik PENDING olur, admin gercekten
-  // parayi gonderdikten sonra elle COMPLETED yapar.
   refundStatus     RefundStatus   @default(NOT_REQUIRED)
   refundIban       String?
   refundNote       String?

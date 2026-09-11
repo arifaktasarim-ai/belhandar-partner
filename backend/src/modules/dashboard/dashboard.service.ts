@@ -11,10 +11,13 @@ export async function getPartnerDashboard(partnerProfileId: string) {
   const now = new Date();
   const todayStart = startOfDay(now);
   const monthStart = startOfMonth(now);
+  const yearStart = new Date(now.getFullYear(), 0, 1);
   const sevenDaysAgo = new Date(todayStart);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  const thirtyDaysAgo = new Date(todayStart);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
 
-  const [todaySales, monthSales, stocks, orderCounts, last7DaysSales, earningsAgg] = await Promise.all([
+  const [todaySales, monthSales, stocks, orderCounts, last30DaysSales, earningsAgg, yearAgg] = await Promise.all([
     prisma.saleItem.aggregate({
       where: { sale: { partnerProfileId, status: 'COMPLETED', saleDate: { gte: todayStart } } },
       _sum: { quantity: true },
@@ -32,11 +35,22 @@ export async function getPartnerDashboard(partnerProfileId: string) {
       where: { partnerProfileId },
       _count: { _all: true },
     }),
+    // 30 gunluk veri tek seferde cekilir; 7 gunluk gorunum bunun son 7 gunu kullanilarak turetilir
     prisma.sale.findMany({
-      where: { partnerProfileId, status: 'COMPLETED', saleDate: { gte: sevenDaysAgo } },
-      select: { saleDate: true, items: { select: { quantity: true } } },
+      where: { partnerProfileId, status: 'COMPLETED', saleDate: { gte: thirtyDaysAgo } },
+      select: {
+        saleDate: true,
+        totalAmountCents: true,
+        totalProfitCents: true,
+        items: { select: { quantity: true } },
+      },
     }),
     prisma.earning.aggregate({ where: { partnerProfileId }, _sum: { amountCents: true } }),
+    prisma.sale.aggregate({
+      where: { partnerProfileId, status: 'COMPLETED', saleDate: { gte: yearStart } },
+      _sum: { totalAmountCents: true, totalProfitCents: true },
+      _count: { _all: true },
+    }),
   ]);
 
   const pendingOrders = orderCounts.find((o) => o.status === 'PENDING_APPROVAL')?._count._all ?? 0;
@@ -45,19 +59,25 @@ export async function getPartnerDashboard(partnerProfileId: string) {
     .reduce((sum, o) => sum + o._count._all, 0);
   const shippedOrders = orderCounts.find((o) => o.status === 'SHIPPED')?._count._all ?? 0;
 
-  // Son 7 gunu gunluk toplam adet olarak grupla
-  const dayBuckets: Record<string, number> = {};
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(sevenDaysAgo);
+  // Son 30 gunu gunluk toplam adet/ciro/kar olarak grupla
+  type DayBucket = { units: number; revenueCents: number; profitCents: number };
+  const dayBuckets: Record<string, DayBucket> = {};
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(thirtyDaysAgo);
     d.setDate(d.getDate() + i);
-    dayBuckets[d.toISOString().slice(0, 10)] = 0;
+    dayBuckets[d.toISOString().slice(0, 10)] = { units: 0, revenueCents: 0, profitCents: 0 };
   }
-  for (const sale of last7DaysSales) {
+  for (const sale of last30DaysSales) {
     const key = sale.saleDate.toISOString().slice(0, 10);
     if (key in dayBuckets) {
-      dayBuckets[key] += sale.items.reduce((s, i) => s + i.quantity, 0);
+      dayBuckets[key].units += sale.items.reduce((s, i) => s + i.quantity, 0);
+      dayBuckets[key].revenueCents += sale.totalAmountCents;
+      dayBuckets[key].profitCents += sale.totalProfitCents;
     }
   }
+
+  const last30Days = Object.entries(dayBuckets).map(([date, v]) => ({ date, ...v }));
+  const last7Days = last30Days.slice(-7);
 
   return {
     todaySalesUnits: todaySales._sum.quantity ?? 0,
@@ -67,7 +87,13 @@ export async function getPartnerDashboard(partnerProfileId: string) {
     pendingOrders,
     preparingOrders,
     shippedOrders,
-    last7Days: Object.entries(dayBuckets).map(([date, units]) => ({ date, units })),
+    last7Days,
+    last30Days,
+    yearToDate: {
+      salesCount: yearAgg._count._all ?? 0,
+      revenueCents: yearAgg._sum.totalAmountCents ?? 0,
+      profitCents: yearAgg._sum.totalProfitCents ?? 0,
+    },
   };
 }
 
