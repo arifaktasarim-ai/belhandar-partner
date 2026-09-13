@@ -45,6 +45,12 @@ const AdminCustomersPage = {
       `;
 
       renderFiltered('');
+
+      const prefillSearch = ReportNav.consume(ReportNav.KEYS.CUSTOMERS_SEARCH);
+      if (prefillSearch) {
+        slot.querySelector('#c-search').value = prefillSearch;
+        renderFiltered(prefillSearch.trim().toLowerCase());
+      }
     } catch (err) {
       wrap.innerHTML = `<div class="card card-pad"><p class="field-error">${err.message}</p></div>`;
     }

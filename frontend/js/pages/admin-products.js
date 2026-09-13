@@ -11,6 +11,10 @@ const AdminProductsPage = {
           <button class="btn btn-gold" id="btn-new-product">+ Yeni Ürün</button>
         </div>
       </div>
+      <div class="field" style="max-width:340px; margin-bottom:16px;">
+        <label>Ürün Ara</label>
+        <input type="text" id="p-search" placeholder="Ürün adı veya SKU..." />
+      </div>
       <div id="products-wrap"></div>
 
       <div id="product-form-panel" class="card card-pad" style="display:none; margin-top:16px;">
@@ -96,7 +100,19 @@ const AdminProductsPage = {
     slot.querySelector('#product-form').addEventListener('submit', (e) => this.submitProduct(e, slot));
     slot.querySelector('#plan-form').addEventListener('submit', (e) => this.submitPlan(e, slot));
 
+    let debounceTimer;
+    slot.querySelector('#p-search').addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => this.renderFilteredProducts(slot.querySelector('#products-wrap'), e.target.value.trim().toLowerCase()), 250);
+    });
+
     await this.loadProducts(slot.querySelector('#products-wrap'));
+
+    const prefillSearch = ReportNav.consume(ReportNav.KEYS.PRODUCTS_SEARCH);
+    if (prefillSearch) {
+      slot.querySelector('#p-search').value = prefillSearch;
+      this.renderFilteredProducts(slot.querySelector('#products-wrap'), prefillSearch.trim().toLowerCase());
+    }
   },
 
   fmtTl(cents) {
@@ -107,6 +123,7 @@ const AdminProductsPage = {
     wrap.innerHTML = `<div class="card card-pad" style="text-align:center; padding:40px;"><div class="spinner" style="margin:0 auto"></div></div>`;
     try {
       const { data: products } = await Api.get('/products?all=true');
+      this.products = products;
       if (!products.length) {
         wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">🧴</div><h3>Henüz ürün yok</h3><p>"Yeni Ürün" ile ilk ürününüzü ekleyin.</p></div></div>`;
         return;
@@ -116,6 +133,19 @@ const AdminProductsPage = {
     } catch (err) {
       wrap.innerHTML = `<div class="card card-pad"><p class="field-error">${err.message}</p></div>`;
     }
+  },
+
+  renderFilteredProducts(wrap, search) {
+    const products = this.products || [];
+    const filtered = search
+      ? products.filter((p) => p.name.toLowerCase().includes(search) || p.productCode.toLowerCase().includes(search) || p.variants.some((v) => v.sku.toLowerCase().includes(search)))
+      : products;
+    if (!filtered.length) {
+      wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="em-icon">🔍</div><h3>Ürün bulunamadı</h3></div></div>`;
+      return;
+    }
+    wrap.innerHTML = filtered.map((p) => this.productCardHtml(p)).join('');
+    this.bindActions(wrap);
   },
 
   productCardHtml(product) {

@@ -33,4 +33,9 @@ router.get('/monthly-earnings', asyncHandler(async (_req: Request, res: Response
   sendCsv(res, `belhandar-aylik-kazanc-raporu-${Date.now()}.csv`, await service.buildMonthlyEarningsReportCsv());
 }));
 
+router.get('/analytics', asyncHandler(async (_req: Request, res: Response) => {
+  const data = await service.buildAnalytics();
+  res.json({ success: true, data });
+}));
+
 export default router;

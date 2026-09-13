@@ -25,6 +25,12 @@ const AdminOrdersPage = {
       <div id="orders-wrap"></div>
     `;
 
+    const prefillStatus = ReportNav.consume(ReportNav.KEYS.ORDERS_STATUS);
+    if (prefillStatus) {
+      this.state.status = prefillStatus;
+      slot.querySelector('#o-status').value = prefillStatus;
+    }
+
     slot.querySelector('#o-status').addEventListener('change', (e) => {
       this.state.status = e.target.value;
       this.load(slot.querySelector('#orders-wrap'));

@@ -20,6 +20,12 @@ const AdminReturnsPage = {
     `;
 
     this.state.status = 'PENDING';
+    const prefillStatus = ReportNav.consume(ReportNav.KEYS.RETURNS_STATUS);
+    if (prefillStatus) {
+      this.state.status = prefillStatus;
+      slot.querySelector('#r-status').value = prefillStatus;
+    }
+
     slot.querySelector('#r-status').addEventListener('change', (e) => {
       this.state.status = e.target.value;
       this.load(slot.querySelector('#returns-wrap'));

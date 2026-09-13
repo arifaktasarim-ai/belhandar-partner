@@ -1,6 +1,6 @@
 const AdminSalesPage = {
   partners: [],
-  state: { partnerId: '', status: '', search: '', year: '', month: '' },
+  state: { partnerId: '', status: '', search: '', year: '', month: '', channel: '' },
 
   async render(container) {
     const slot = Layout.renderShell(container, { title: 'Paydaş Satışları' });
@@ -20,6 +20,14 @@ const AdminSalesPage = {
             <option value="">Tümü</option>
             <option value="COMPLETED">Tamamlandı</option>
             <option value="VOID">İptal</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0; min-width:140px;">
+          <label>Kanal</label>
+          <select id="s-channel">
+            <option value="">Tümü</option>
+            <option value="KARGO">Kargo</option>
+            <option value="ELDEN">Elden</option>
           </select>
         </div>
         <div class="field" style="margin:0; min-width:120px;">
@@ -44,9 +52,18 @@ const AdminSalesPage = {
     this.populateYearFilter(slot);
     await this.loadPartnerOptions(slot);
 
+    // Raporlar sayfasindan gelen on-filtreleri uygula (varsa)
+    const prefillPartner = ReportNav.consumeJson(ReportNav.KEYS.SALES_PARTNER);
+    const prefillStatus = ReportNav.consume(ReportNav.KEYS.SALES_STATUS);
+    const prefillChannel = ReportNav.consume(ReportNav.KEYS.SALES_CHANNEL);
+    if (prefillPartner) { this.state.partnerId = prefillPartner.id; slot.querySelector('#s-partner').value = prefillPartner.id; }
+    if (prefillStatus) { this.state.status = prefillStatus; slot.querySelector('#s-status').value = prefillStatus; }
+    if (prefillChannel) { this.state.channel = prefillChannel; slot.querySelector('#s-channel').value = prefillChannel; }
+
     const reload = () => this.load(slot);
     slot.querySelector('#s-partner').addEventListener('change', (e) => { this.state.partnerId = e.target.value; reload(); });
     slot.querySelector('#s-status').addEventListener('change', (e) => { this.state.status = e.target.value; reload(); });
+    slot.querySelector('#s-channel').addEventListener('change', (e) => { this.state.channel = e.target.value; reload(); });
     slot.querySelector('#s-year').addEventListener('change', (e) => { this.state.year = e.target.value; reload(); });
     slot.querySelector('#s-month').addEventListener('change', (e) => { this.state.month = e.target.value; reload(); });
     let debounceTimer;
@@ -97,6 +114,7 @@ const AdminSalesPage = {
       const { data: sales } = await Api.get(`/sales?${params.toString()}`);
       let filtered = sales;
       if (this.state.status) filtered = filtered.filter((s) => s.status === this.state.status);
+      if (this.state.channel) filtered = filtered.filter((s) => s.channel === this.state.channel);
       if (this.state.search) {
         filtered = filtered.filter((s) =>
           (s.customerName || '').toLowerCase().includes(this.state.search) ||
